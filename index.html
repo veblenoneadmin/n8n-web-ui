@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Product Order</title>
+</head>
+<body>
+  <h1>Product Order Form</h1>
+
+  <form id="orderForm">
+    <input type="text" name="product" placeholder="Product Name" required />
+    <input type="number" name="quantity" placeholder="Quantity" required />
+    <input type="number" name="price" placeholder="Price" required />
+    <button type="submit">Create Invoice</button>
+  </form>
+
+  <pre id="result"></pre>
+
+  <script>
+    document.getElementById("orderForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const data = {
+        order: [
+          {
+            ProductName: e.target.product.value,
+            Quantity: parseInt(e.target.quantity.value),
+            Price: parseFloat(e.target.price.value)
+          }
+        ]
+      };
+
+      const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      document.getElementById("result").textContent = JSON.stringify(result, null, 2);
+    });
+  </script>
+</body>
+</html>
