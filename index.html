@@ -50,25 +50,46 @@
     <input type="text" id="customerName" placeholder="Enter your name" required />
 
     <h3>Select Products:</h3>
-    <label><input type="checkbox" name="product" value="Product A" /> Product A</label>
-    <label><input type="checkbox" name="product" value="Product B" /> Product B</label>
-    <label><input type="checkbox" name="product" value="Product C" /> Product C</label>
+    <div id="productList">Loading products...</div>
 
     <button type="submit">Submit Order</button>
   </form>
 
-  <!-- 👇 Your fetch() code goes here -->
   <script>
+    const productList = document.getElementById("productList");
+
+    // 1️⃣ Fetch products dynamically from n8n
+    async function loadProducts() {
+      try {
+        const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
+        const data = await res.json();
+
+        productList.innerHTML = "";
+
+        data.forEach((item) => {
+          const label = document.createElement("label");
+          label.innerHTML = `
+            <input type="checkbox" name="product" value="${item.Product}">
+            ${item.Product} - $${item.Price}
+          `;
+          productList.appendChild(label);
+        });
+      } catch (err) {
+        productList.innerHTML = "⚠️ Failed to load products.";
+      }
+    }
+
+    loadProducts();
+
+    // 2️⃣ Handle form submission
     document.getElementById("orderForm").addEventListener("submit", async function(e) {
       e.preventDefault();
 
-      // Get selected products
       const selectedProducts = Array.from(document.querySelectorAll("input[name='product']:checked"))
         .map(p => p.value);
 
       const customerName = document.getElementById("customerName").value;
 
-      // Send to n8n webhook
       const response = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,7 +100,7 @@
       });
 
       const result = await response.json();
-      alert("✅ Invoice created successfully:\n\n" + JSON.stringify(result, null, 2));
+      alert("✅ " + result.message + "\n\n" + JSON.stringify(result, null, 2));
     });
   </script>
 </body>
