@@ -1,106 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Invoice</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 30px;
-      background: #f4f4f4;
-    }
-    form {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin: 5px 0;
-    }
-    button {
-      display: block;
-      width: 100%;
-      margin-top: 20px;
-      background: #007bff;
-      color: white;
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-  </style>
+  <title>Product Order</title>
 </head>
 <body>
-  <h1>Create Invoice</h1>
+  <h1>Product Order Form</h1>
 
   <form id="orderForm">
-    <label>Customer Name:</label>
-    <input type="text" id="customerName" placeholder="Enter your name" required />
-
-    <h3>Select Products:</h3>
-    <div id="productList">Loading products...</div>
-
-    <button type="submit">Submit Order</button>
+    <input type="text" name="product" placeholder="Product Name" required />
+    <input type="number" name="quantity" placeholder="Quantity" required />
+    <input type="number" name="price" placeholder="Price" required />
+    <button type="submit">Create Invoice</button>
   </form>
 
+  <pre id="result"></pre>
+
   <script>
-    const productList = document.getElementById("productList");
-
-    // 1️⃣ Fetch products dynamically from n8n
-    async function loadProducts() {
-      try {
-        const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
-        const data = await res.json();
-
-        productList.innerHTML = "";
-
-        data.forEach((item) => {
-          const label = document.createElement("label");
-          label.innerHTML = `
-            <input type="checkbox" name="product" value="${item.Product}">
-            ${item.Product} - $${item.Price}
-          `;
-          productList.appendChild(label);
-        });
-      } catch (err) {
-        productList.innerHTML = "⚠️ Failed to load products.";
-      }
-    }
-
-    loadProducts();
-
-    // 2️⃣ Handle form submission
-    document.getElementById("orderForm").addEventListener("submit", async function(e) {
+    document.getElementById("orderForm").addEventListener("submit", async e => {
       e.preventDefault();
+      const data = {
+        order: [
+          {
+            ProductName: e.target.product.value,
+            Quantity: parseInt(e.target.quantity.value),
+            Price: parseFloat(e.target.price.value)
+          }
+        ]
+      };
 
-      const selectedProducts = Array.from(document.querySelectorAll("input[name='product']:checked"))
-        .map(p => p.value);
-
-      const customerName = document.getElementById("customerName").value;
-
-      const response = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
+      const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: customerName,
-          order: selectedProducts
-        }),
+        body: JSON.stringify(data)
       });
 
-      const result = await response.json();
-      alert("✅ " + result.message + "\n\n" + JSON.stringify(result, null, 2));
+      const result = await res.json();
+      document.getElementById("result").textContent = JSON.stringify(result, null, 2);
     });
   </script>
 </body>
