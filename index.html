@@ -3,256 +3,112 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Product Order</title>
+  <title>Product Catalog</title>
   <style>
     body {
-      font-family: "Inter", sans-serif;
-      background: #f8fafc;
+      font-family: "Inter", Arial, sans-serif;
+      background: #f8f9fb;
       color: #333;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 40px;
-    }
-
-    .order-card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-      width: 100%;
-      max-width: 700px;
-      padding: 25px 30px;
+      padding: 20px;
     }
 
     h1 {
       text-align: center;
-      font-size: 1.8rem;
-      margin-bottom: 20px;
       color: #222;
+      margin-bottom: 30px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 15px;
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
     }
 
-    th, td {
-      text-align: left;
-      padding: 12px;
+    .product-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    th {
-      background: #f1f5f9;
-      color: #555;
-      border-bottom: 2px solid #e2e8f0;
+    .product-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
 
-    td {
-      border-bottom: 1px solid #e5e7eb;
+    .product-card h2 {
+      font-size: 1.1rem;
+      margin: 0 0 5px 0;
     }
 
-    .quantity-control {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .quantity-control button {
-      background: #e2e8f0;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    .quantity-control button:hover {
-      background: #cbd5e1;
-    }
-
-    .quantity-control input {
-      width: 45px;
-      text-align: center;
-      padding: 5px;
-      border: 1px solid #cbd5e1;
-      border-radius: 5px;
-    }
-
-    .total-section {
-      text-align: right;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: #007bff;
-      margin-top: 10px;
-    }
-
-    .submit-btn {
-      display: block;
-      width: 100%;
-      margin-top: 20px;
-      background: #007bff;
-      color: white;
-      padding: 12px;
-      font-size: 1rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    .submit-btn:hover {
-      background: #0056b3;
-    }
-
-    #loading, #error {
-      text-align: center;
+    .product-card p {
+      font-size: 0.9rem;
       color: #666;
-      margin-top: 10px;
+      margin: 5px 0;
+    }
+
+    .price {
+      color: #007bff;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    #loading {
+      text-align: center;
+      font-size: 1.1rem;
+      color: #555;
     }
 
     #error {
+      text-align: center;
       color: red;
       font-weight: bold;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="order-card">
-    <h1>Product Order</h1>
-
-    <div id="loading">Loading products...</div>
-    <div id="error"></div>
-
-    <table id="productTable" style="display:none;">
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>Price</th>
-          <th>Quantity</th>
-          <th>Subtotal</th>
-        </tr>
-      </thead>
-      <tbody id="productBody"></tbody>
-    </table>
-
-    <div class="total-section" id="total">Total: $0.00</div>
-
-    <button class="submit-btn" id="submitBtn">Create Invoice</button>
-  </div>
+  <h1>Available Products</h1>
+  <div id="loading">Loading products...</div>
+  <div id="error"></div>
+  <div class="product-grid" id="productGrid"></div>
 
   <script>
-    let products = [];
-
     async function loadProducts() {
+      const productGrid = document.getElementById("productGrid");
       const loading = document.getElementById("loading");
-      const error = document.getElementById("error");
-      const table = document.getElementById("productTable");
-      const tbody = document.getElementById("productBody");
+      const errorDiv = document.getElementById("error");
 
       try {
-        // --- Try normal fetch first
-        let res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
-
-        // --- If blocked by CORS, use proxy fallback
-        if (!res.ok) {
-          console.warn("Normal fetch failed, trying proxy...");
-          res = await fetch("https://corsproxy.io/?" + encodeURIComponent("https://primary-s0q-production.up.railway.app/webhook/get-products"));
-        }
-
+        const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
         if (!res.ok) throw new Error("Failed to fetch products");
 
-        const data = await res.json();
-        products = data.products || data; // handle both {products: [...]} and [...]
-
+        const products = await res.json();
         loading.style.display = "none";
-        table.style.display = "table";
 
-        tbody.innerHTML = "";
-        products.forEach((p, i) => {
-          const row = document.createElement("tr");
-          const productName = p.ProductName || p.Name || "Unnamed Product";
-          const price = Number(p.Price) || 0;
-
-          row.innerHTML = `
-            <td>${productName}</td>
-            <td>$${price.toFixed(2)}</td>
-            <td>
-              <div class="quantity-control">
-                <button onclick="adjustQuantity(${i}, -1)">-</button>
-                <input type="number" min="0" value="0" id="qty-${i}" onchange="updateTotal()" />
-                <button onclick="adjustQuantity(${i}, 1)">+</button>
-              </div>
-            </td>
-            <td id="subtotal-${i}">$0.00</td>
-          `;
-          tbody.appendChild(row);
-        });
-      } catch (err) {
-        console.error(err);
-        loading.style.display = "none";
-        error.textContent = "Unable to load products. Please try again later.";
-      }
-    }
-
-    function adjustQuantity(index, change) {
-      const qtyInput = document.getElementById(`qty-${index}`);
-      let qty = parseInt(qtyInput.value) + change;
-      qty = Math.max(qty, 0);
-      qtyInput.value = qty;
-      updateTotal();
-    }
-
-    function updateTotal() {
-      let total = 0;
-      products.forEach((p, i) => {
-        const qty = parseInt(document.getElementById(`qty-${i}`).value) || 0;
-        const price = Number(p.Price) || 0;
-        const subtotal = qty * price;
-        total += subtotal;
-        document.getElementById(`subtotal-${i}`).textContent = `$${subtotal.toFixed(2)}`;
-      });
-      document.getElementById("total").textContent = `Total: $${total.toFixed(2)}`;
-    }
-
-    document.getElementById("submitBtn").addEventListener("click", async () => {
-      const order = products
-        .map((p, i) => ({
-          ProductName: p.ProductName || p.Name,
-          SKU: p.SKU,
-          Quantity: parseInt(document.getElementById(`qty-${i}`).value),
-          Price: p.Price
-        }))
-        .filter(item => item.Quantity > 0);
-
-      if (order.length === 0) {
-        alert("Please select at least one product.");
-        return;
-      }
-
-      try {
-        let res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order })
-        });
-
-        if (!res.ok) {
-          console.warn("Normal POST failed, trying proxy...");
-          res = await fetch("https://corsproxy.io/?" + encodeURIComponent("https://primary-s0q-production.up.railway.app/webhook/create-invoice"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ order })
-          });
+        if (products.length === 0) {
+          errorDiv.textContent = "No products available.";
+          return;
         }
 
-        const result = await res.json();
-        alert("Invoice created successfully!");
-        console.log(result);
+        products.forEach(p => {
+          const card = document.createElement("div");
+          card.className = "product-card";
+          card.innerHTML = `
+            <h2>${p.Name || "Unnamed Product"}</h2>
+            <p><strong>SKU:</strong> ${p.SKU || "N/A"}</p>
+            <p class="price">$${Number(p.Price).toFixed(2)}</p>
+            ${p.Description ? `<p>${p.Description}</p>` : ""}
+          `;
+          productGrid.appendChild(card);
+        });
       } catch (err) {
-        alert("Error creating invoice. Check console for details.");
         console.error(err);
+        loading.style.display = "none";
+        errorDiv.textContent = "Unable to load products. Please try again later.";
       }
-    });
+    }
 
     loadProducts();
   </script>
