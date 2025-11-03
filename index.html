@@ -150,10 +150,20 @@
       const tbody = document.getElementById("productBody");
 
       try {
-        const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
+        // --- Try normal fetch first
+        let res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
+
+        // --- If blocked by CORS, use proxy fallback
+        if (!res.ok) {
+          console.warn("Normal fetch failed, trying proxy...");
+          res = await fetch("https://corsproxy.io/?" + encodeURIComponent("https://primary-s0q-production.up.railway.app/webhook/get-products"));
+        }
+
         if (!res.ok) throw new Error("Failed to fetch products");
 
-        products = await res.json();
+        const data = await res.json();
+        products = data.products || data; // handle both {products: [...]} and [...]
+
         loading.style.display = "none";
         table.style.display = "table";
 
@@ -219,15 +229,29 @@
         return;
       }
 
-      const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order })
-      });
+      try {
+        let res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order })
+        });
 
-      const result = await res.json();
-      alert("Invoice created successfully!");
-      console.log(result);
+        if (!res.ok) {
+          console.warn("Normal POST failed, trying proxy...");
+          res = await fetch("https://corsproxy.io/?" + encodeURIComponent("https://primary-s0q-production.up.railway.app/webhook/create-invoice"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order })
+          });
+        }
+
+        const result = await res.json();
+        alert("Invoice created successfully!");
+        console.log(result);
+      } catch (err) {
+        alert("Error creating invoice. Check console for details.");
+        console.error(err);
+      }
     });
 
     loadProducts();
