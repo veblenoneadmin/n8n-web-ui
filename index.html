@@ -2,40 +2,114 @@
 <html>
 <head>
   <title>Product Order</title>
+  <style>
+    .product-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .product-row input {
+      width: 60px;
+      margin-left: 10px;
+    }
+  </style>
 </head>
 <body>
   <h1>Product Order Form</h1>
 
-  <form id="orderForm">
-    <input type="text" name="product" placeholder="Product Name" required />
-    <input type="number" name="quantity" placeholder="Quantity" required />
-    <input type="number" name="price" placeholder="Price" required />
-    <button type="submit">Create Invoice</button>
-  </form>
+  <div id="productList">
+    <h2>Select Products</h2>
+    <div id="products"></div>
+  </div>
+
+  <button id="submitBtn">Create Invoice</button>
 
   <pre id="result"></pre>
 
   <script>
-    document.getElementById("orderForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const data = {
-        order: [
-          {
-            ProductName: e.target.product.value,
-            Quantity: parseInt(e.target.quantity.value),
-            Price: parseFloat(e.target.price.value)
-          }
-        ]
-      };
+    let allProducts = [];
 
-      const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+    // Fetch and display all products
+    async function loadProducts() {
+      try {
+        const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/get-products");
+        const data = await res.json();
+        allProducts = data[0]?.items || [];
+
+        const container = document.getElementById("products");
+        container.innerHTML = "";
+
+        allProducts.forEach((p, index) => {
+          const row = document.createElement("div");
+          row.className = "product-row";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.id = `product-${index}`;
+          checkbox.value = p.SKU;
+
+          const label = document.createElement("label");
+          label.htmlFor = `product-${index}`;
+          label.textContent = `${p.Name} (SKU: ${p.SKU}) - $${p.Price}`;
+
+          const qtyInput = document.createElement("input");
+          qtyInput.type = "number";
+          qtyInput.min = 1;
+          qtyInput.value = 1;
+          qtyInput.disabled = true; // only enable if checked
+
+          // Enable qty input when checkbox is checked
+          checkbox.addEventListener("change", () => {
+            qtyInput.disabled = !checkbox.checked;
+          });
+
+          row.appendChild(checkbox);
+          row.appendChild(label);
+          row.appendChild(qtyInput);
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error(err);
+        document.getElementById("products").textContent = "Failed to load products.";
+      }
+    }
+
+    loadProducts();
+
+    // Handle invoice submission
+    document.getElementById("submitBtn").addEventListener("click", async () => {
+      const order = [];
+      allProducts.forEach((p, index) => {
+        const checkbox = document.getElementById(`product-${index}`);
+        const qtyInput = checkbox.nextSibling.nextSibling; // qty input
+        if (checkbox.checked) {
+          order.push({
+            ProductName: p.Name,
+            SKU: p.SKU,
+            Quantity: parseInt(qtyInput.value),
+            Price: parseFloat(p.Price)
+          });
+        }
       });
 
-      const result = await res.json();
-      document.getElementById("result").textContent = JSON.stringify(result, null, 2);
+      if (order.length === 0) {
+        alert("Please select at least one product.");
+        return;
+      }
+
+      try {
+        const res = await fetch("https://primary-s0q-production.up.railway.app/webhook/create-invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order })
+        });
+
+        const result = await res.json();
+        document.getElementById("result").textContent = JSON.stringify(result, null, 2);
+      } catch (err) {
+        console.error(err);
+        document.getElementById("result").textContent = "Failed to create invoice.";
+      }
     });
   </script>
 </body>
