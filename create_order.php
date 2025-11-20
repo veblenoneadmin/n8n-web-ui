@@ -81,6 +81,20 @@ try {
     $message = "❌ Failed to load ducted installations: " . $e->getMessage();
 }
 
+// Load equipment list (add this near the other "Load lists" queries)
+$equipment = [];
+try {
+    // Table: equipment (id, item, rate)
+    $equipment = $pdo->query("SELECT id, item, rate FROM equipment ORDER BY item ASC")
+                      ->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // if table missing or query fails, $equipment stays an empty array
+    $equipment = [];
+    // optionally set $message so you see the error on the page (comment out in production)
+    // $message = "❌ Failed to load equipment: " . $e->getMessage();
+}
+
+
 // Try to find a split installation table under several possible names
 $split_table_candidates = ['split_system_installation', 'split_installations', 'split_systems', 'split_installation'];
 $found = find_split_table($pdo, $split_table_candidates);
@@ -273,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
 
             // Redirect to orders.php to view newly created order
-            header("Location: orders.php?order_id=" . urlencode($order_id));
+            header("Location: orders?order_id=" . urlencode($order_id));
             exit;
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -297,7 +311,7 @@ ob_start();
     <div class="flex-1 flex flex-col gap-6">
 
       <!-- Customer Info (Name, Email, Contact, Date) -->
-      <div class="bg-white p-3 rounded-xl shadow">
+      <div class="bg-white p-3 rounded-xl shadow shadow border border-gray-200">
         <h5 class="text-lg font-medium text-gray-700 mb-3">Client Information</h5>
         <div class="grid grid-cols-2 gap-4">
           <input type="text" name="customer_name" placeholder="Name" class="border rounded w-full text-sm p-2" required>
@@ -308,7 +322,7 @@ ob_start();
       </div>
 
       <!-- Products -->
-      <div class="bg-white p-4 rounded-xl shadow flex flex-col">
+      <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
         <div class="flex items-center justify-between mb-3">
           <span class="font-medium text-gray-700">Material</span>
           <input type="text" id="productSearch" placeholder="Search Product" class="border px-3 py-2 rounded-lg shadow-sm w-64">
@@ -339,7 +353,7 @@ ob_start();
       </div>
 
       <!-- Split System Installation -->
-      <div class="bg-white p-4 rounded-xl shadow flex flex-col">
+      <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
         <div class="flex items-center justify-between mb-3">
           <span class="font-medium text-gray-700">Split System Installation</span>
           <input type="text" id="splitSearch" placeholder="Search Split" class="border px-3 py-2 rounded-lg shadow-sm w-64">
@@ -373,7 +387,7 @@ ob_start();
       </div>
 
       <!-- Ducted Installations -->
-      <div class="bg-white p-4 rounded-xl shadow flex flex-col">
+      <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
         <div class="flex items-center justify-between mb-3">
           <span class="font-medium text-gray-700">Ducted Installation</span>
         </div>
@@ -418,216 +432,497 @@ ob_start();
       </div>
 
       <!-- Personnel -->
-      <div class="bg-white p-4 rounded-xl shadow flex flex-col">
-        <div class="flex items-center justify-between mb-3">
-          <span class="font-medium text-gray-700">Personnel</span>
-          <input type="text" id="personnelSearch" placeholder="Search..." class="border px-3 py-2 rounded-lg shadow-sm w-64">
-        </div>
-        <div class="overflow-y-auto max-h-64 border rounded-lg">
-          <table id="personnelTable" class="w-full border-collapse text-sm">
-            <thead class="bg-gray-100 sticky top-0">
-              <tr><th class="p-2 text-left">Name</th><th class="p-2 text-center">Rate</th><th class="p-2 text-center">Select</th><th class="p-2 text-center">Subtotal</th></tr>
-            </thead>
-            <tbody>
-              <?php foreach($personnel as $pers):
-                $isBooked = in_array($pers['id'], $booked_personnel_ids);
-              ?>
-              <tr class="border-b <?= $isBooked ? 'bg-red-50 opacity-80' : '' ?>" data-personnel-id="<?= (int)$pers['id'] ?>">
-                <td class="pers-name p-2"><?= htmlspecialchars($pers['name']) ?></td>
-                <td class="p-2 text-center"><?= number_format($pers['rate'],2) ?></td>
-                <td class="p-2 text-center">
-                  <input type="checkbox" name="personnel_selected[]" class="pers-check" value="<?= (int)$pers['id'] ?>" data-price="<?= htmlspecialchars($pers['rate']) ?>" <?= $isBooked ? 'disabled title="Booked on selected date"' : '' ?>>
-                </td>
-                <td class="pers-subtotal p-2 text-center">0.00</td>
-              </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
+<div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Personnel</span>
+    <input type="text" id="personnelSearch" placeholder="Search..." class="border px-3 py-2 rounded-lg shadow-sm w-64">
+  </div>
+
+  <div class="overflow-y-auto max-h-64 border rounded-lg">
+    <table id="personnelTable" class="w-full border-collapse text-sm">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th class="p-2 text-left">Name</th>
+          <th class="p-2 text-center">Rate</th>
+          <th class="p-2 text-center">Hours</th>
+          <th class="p-2 text-center">Subtotal</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <?php foreach($personnel as $pers):
+          $isBooked = in_array($pers['id'], $booked_personnel_ids);
+        ?>
+        <tr class="border-b <?= $isBooked ? 'bg-red-50 opacity-80' : '' ?>"
+            data-personnel-id="<?= (int)$pers['id'] ?>"
+            data-rate="<?= htmlspecialchars($pers['rate']) ?>">
+
+          <td class="pers-name p-2"><?= htmlspecialchars($pers['name']) ?></td>
+          <td class="p-2 text-center"><?= number_format($pers['rate'], 2) ?></td>
+
+          <td class="p-2 text-center">
+            <?php if(!$isBooked): ?>
+            <div class="flex items-center justify-center gap-2">
+              <button type="button" class="hour-minus bg-gray-200 px-2 rounded">–</button>
+              <input type="number" name="personnel_hours[<?= (int)$pers['id'] ?>]"
+                     class="hour-input w-12 text-center border rounded"
+                     value="0" min="0">
+              <button type="button" class="hour-plus bg-gray-200 px-2 rounded">+</button>
+            </div>
+            <?php else: ?>
+              <span class="text-red-400 text-xs">Booked</span>
+            <?php endif; ?>
+          </td>
+
+          <td class="pers-subtotal p-2 text-center">0.00</td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Equipment -->
+<div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Equipment</span>
+    <input type="text" id="equipmentSearch" placeholder="Search..." class="border px-3 py-2 rounded-lg shadow-sm w-64">
+  </div>
+
+  <div class="overflow-y-auto max-h-64 border rounded-lg">
+    <table id="equipmentTable" class="w-full border-collapse text-sm">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th class="p-2 text-left">Item</th>
+          <th class="p-2 text-center">Rate</th>
+          <th class="p-2 text-center">Qty</th>
+          <th class="p-2 text-center">Subtotal</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <?php foreach($equipment as $equip): ?>
+        <tr class="border-b"
+            data-equip-id="<?= (int)$equip['id'] ?>"
+            data-rate="<?= htmlspecialchars($equip['rate']) ?>">
+
+          <td class="equip-name p-2"><?= htmlspecialchars($equip['item']) ?></td>
+          <td class="p-2 text-center"><?= number_format($equip['rate'], 2) ?></td>
+
+          <td class="p-2 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button type="button" class="equip-minus bg-gray-200 px-2 rounded">–</button>
+              <input type="number"
+                     name="equipment_qty[<?= (int)$equip['id'] ?>]"
+                     class="equip-input w-12 text-center border rounded"
+                     value="0" min="0">
+              <button type="button" class="equip-plus bg-gray-200 px-2 rounded">+</button>
+            </div>
+          </td>
+
+          <td class="equip-subtotal p-2 text-center">0.00</td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- OTHER EXPENSES CARD -->
+<div class="bg-white p-4 rounded-xl shadow flex flex-col mb-4">
+
+    <span class="font-medium text-gray-700 mb-2">Other Expenses</span>
+
+    <!-- Wrapper for dynamic inputs -->
+    <div id="otherExpensesWrapper">
+        <div id="otherExpensesContainer" class="space-y-2"></div>
+    </div>
+
+    <!-- Add More Button BELOW the inputs -->
+    <div class="flex justify-end mt-3">
+        <button type="button" id="addOtherExpenseBtn"
+                class="flex items-center gap-2 px-3 py-2 rounded-full bg-blue-500 text-white shadow hover:bg-blue-600">
+            <span class="material-icons text-sm">add</span>
+            <span class="text-sm">Add more</span>
+        </button>
+    </div>
+
+</div>
 
     </div> <!-- END LEFT SIDE -->
 
-    <!-- RIGHT PANEL -->
-    <div id="rightPanel" class="w-80 flex flex-col bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-auto max-h-[80vh]">
+   <!-- RIGHT PANEL WRAPPER -->
+<div class="w-80 flex flex-col gap-4">
 
-      <!-- ITEM LIST -->
-      <div id="order-summary" class="flex-1 overflow-y-auto mb-4">
-        <span style="color:#777;">No items selected.</span>
-      </div>
+    <!-- PROFIT CARD -->
+    <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
 
-      <!-- TOTAL + BUTTON -->
-      <div id="summaryFooter">
-        <hr class="mb-4">
-        <p class="text-lg font-medium mb-3">Total:
-          <span class="text-blue-700 font-bold text-2xl">$<span id="total">0.00</span></span>
-        </p>
-        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 text-lg">
-          Save Order
-        </button>
-      </div>
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Profit:</span>
+            <span>$<span id="profitDisplay">0.00</span></span>
+        </div>
 
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Percent Margin:</span>
+            <span><span id="profitMarginDisplay">0.00</span>%</span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Net Profit:</span>
+            <span><span id="netProfitDisplay">0.00</span>%</span>
+        </div>
+
+        <div class="flex justify-between font-semibold text-gray-700">
+            <span>Total Profit:</span>
+            <span>$<span id="totalProfitDisplay">0.00</span></span>
+        </div>
     </div>
+
+    <!-- SUMMARY CARD -->
+    <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col">
+        
+        <!-- ITEM LIST -->
+        <div id="order-summary" class="flex-1 overflow-y-auto mb-4">
+            <span style="color:#777;">No items selected.</span>
+        </div>
+
+        <!-- TOTALS -->
+        <hr class="mb-3">
+
+        <p class="text-base font-medium text-gray-600 flex justify-between mb-1">
+            <span>Subtotal:</span>
+            <span>$<span id="subtotalDisplay">0.00</span></span>
+        </p>
+
+        <p class="text-base font-medium text-gray-600 flex justify-between mb-1">
+            <span>Tax:</span>
+            <span>$<span id="taxAmount">0.00</span></span>
+        </p>
+
+        <p class="text-xl font-semibold flex justify-between text-blue-700 mb-4">
+            <span>Grand Total:</span>
+            <span>$<span id="grandTotal">0.00</span></span>
+        </p>
+
+        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 text-lg">
+            Save Order
+        </button>
+    </div>
+
+</div>
+
+
 
   </div>
 </form>
 
 <!-- JS -->
 <script>
-(function(){
+(function () {
 
-  function updateTotal(){
-    var total = 0;
-    var summaryHTML = '';
+  // =====================================================
+  // MAIN TOTAL CALCULATOR
+  // =====================================================
+  function updateTotal() {
+    let subtotal = 0;
+    let summaryHTML = "";
 
-    // Products (.qty-input)
-    document.querySelectorAll('.qty-input').forEach(function(input){
-      var qty = parseInt(input.value) || 0;
-      var price = parseFloat(input.dataset.price) || 0;
-      var subtotal = qty * price;
-      var row = input.closest('tr');
-      var subcell = row.querySelector('.subtotal');
-      if (subcell) subcell.textContent = subtotal.toFixed(2);
-      if (qty > 0) {
-        var name = row.querySelector('.product-name')?.textContent || row.querySelector('.item-name')?.textContent || 'Item';
-        summaryHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${name} x ${qty}</span><span>$${subtotal.toFixed(2)}</span></div>`;
+    // ===================== PRODUCTS =====================
+    document.querySelectorAll('.qty-input').forEach(function (input) {
+      let qty = parseInt(input.value) || 0;
+      let price = parseFloat(input.dataset.price) || 0;
+      let row = input.closest('tr');
+      let sub = price * qty;
+
+      if (row.querySelector('.subtotal')) {
+        row.querySelector('.subtotal').textContent = sub.toFixed(2);
       }
-      total += subtotal;
-    });
-
-    // Split (.split-qty)
-    document.querySelectorAll('.split-qty').forEach(function(input){
-      var qty = parseInt(input.value) || 0;
-      var price = parseFloat(input.dataset.price) || 0;
-      var subtotal = qty * price;
-      var row = input.closest('tr');
-      var subcell = row.querySelector('.subtotal');
-      if (subcell) subcell.textContent = subtotal.toFixed(2);
-      if (qty > 0) {
-        var name = row.querySelector('.item-name')?.textContent || 'Split';
-        summaryHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${name} x ${qty}</span><span>₱${subtotal.toFixed(2)}</span></div>`;
-      }
-      total += subtotal;
-    });
-
-    // Personnel (checkboxes)
-    document.querySelectorAll('.pers-check').forEach(function(chk){
-      var price = parseFloat(chk.dataset.price) || 0;
-      var subtotal = chk.checked ? price : 0;
-      var row = chk.closest('tr');
-      var subcell = row.querySelector('.pers-subtotal');
-      if (subcell) subcell.textContent = subtotal.toFixed(2);
-      if (chk.checked) {
-        var name = row.querySelector('.pers-name')?.textContent || 'Personnel';
-        summaryHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${name}</span><span>₱${subtotal.toFixed(2)}</span></div>`;
-      }
-      total += subtotal;
-    });
-
-    // Ducted Installations (.installation-qty)
-    document.querySelectorAll('.installation-qty').forEach(function(input){
-      var qty = parseInt(input.value) || 0;
-      var row = input.closest('tr');
-      var price = parseFloat(row.dataset.price) || 0;
-      var subtotal = price * qty;
-      var subcell = row.querySelector('.installation-subtotal');
-      if (subcell) subcell.textContent = subtotal.toFixed(2);
 
       if (qty > 0) {
-        var select = row.querySelector('.install-type');
-        var type = select ? select.value : '';
-        var model = type === 'indoor' ? row.dataset.modelIndoor : row.dataset.modelOutdoor;
-        summaryHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${model} (${type}) x ${qty}</span><span>₱${subtotal.toFixed(2)}</span></div>`;
+        let name = row.querySelector('.product-name')?.textContent || 'Item';
+        summaryHTML += `
+          <div class="flex justify-between mb-1">
+            <span>${name} x ${qty}</span>
+            <span>$${sub.toFixed(2)}</span>
+          </div>`;
       }
 
-      total += subtotal;
+      subtotal += sub;
     });
 
-    document.getElementById('order-summary').innerHTML = summaryHTML || '<span style="color:#777;">No items selected.</span>';
-    document.getElementById('total').textContent = total.toFixed(2);
-  }
+    // ===================== SPLIT ITEMS =====================
+    document.querySelectorAll('.split-qty').forEach(function (input) {
+      let qty = parseInt(input.value) || 0;
+      let price = parseFloat(input.dataset.price) || 0;
+      let row = input.closest('tr');
+      let sub = price * qty;
 
-  // plus/minus general handler
-  document.addEventListener('click', function(e){
-    if (e.target.classList.contains('plus-btn') || e.target.classList.contains('minus-btn')) {
-      var input = e.target.closest('td,div')?.querySelector('input[type=number]');
+      if (row.querySelector('.subtotal')) {
+        row.querySelector('.subtotal').textContent = sub.toFixed(2);
+      }
+
+      if (qty > 0) {
+        let name = row.querySelector('.item-name')?.textContent || 'Split Item';
+        summaryHTML += `
+          <div class="flex justify-between mb-1">
+            <span>${name} x ${qty}</span>
+            <span>$${sub.toFixed(2)}</span>
+          </div>`;
+      }
+
+      subtotal += sub;
+    });
+
+    // ===================== PERSONNEL HOURS =====================
+    document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
+      const rate = parseFloat(row.dataset.rate);
+      const input = row.querySelector(".hour-input");
+      const subtotalCell = row.querySelector(".pers-subtotal");
       if (!input) return;
-      var v = parseInt(input.value) || 0;
-      if (e.target.classList.contains('plus-btn')) v++;
-      if (e.target.classList.contains('minus-btn') && v > 0) v--;
-      input.value = v;
-      updateTotal();
-    }
-  });
 
-  // checkbox / install-type change
-  document.addEventListener('change', function(e){
-    if (e.target.classList.contains('pers-check') || e.target.classList.contains('install-type') || e.target.classList.contains('split-qty') || e.target.classList.contains('installation-qty') || e.target.classList.contains('qty-input')) updateTotal();
-  });
+      let hours = parseFloat(input.value) || 0;
+      let persSubtotal = rate * hours;
 
-  // input direct changes
-  document.querySelectorAll('input[type=number]').forEach(function(inp){ inp.addEventListener('input', updateTotal); });
+      subtotalCell.textContent = persSubtotal.toFixed(2);
 
-  // search filters
-  document.getElementById('productSearch')?.addEventListener('input', function(){
-    var q = this.value.toLowerCase();
-    document.querySelectorAll('#productsTable tbody tr').forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
-  });
-  document.getElementById('personnelSearch')?.addEventListener('input', function(){
-    var q = this.value.toLowerCase();
-    document.querySelectorAll('#personnelTable tbody tr').forEach(r => r.style.display = r.querySelector('td:first-child').textContent.toLowerCase().includes(q) ? '' : 'none');
-  });
-  document.getElementById('splitSearch')?.addEventListener('input', function(){
-    var q = this.value.toLowerCase();
-    document.querySelectorAll('#splitTable tbody tr').forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
-  });
+      if (hours > 0) {
+        let name = row.querySelector(".pers-name").textContent;
+        summaryHTML += `
+          <div class="flex justify-between mb-1">
+              <span>${name} (${hours} hr)</span>
+              <span>$${persSubtotal.toFixed(2)}</span>
+          </div>`;
+      }
 
-  // AJAX: update personnel availability when appointment_date changes
-  document.getElementById('appointment_date')?.addEventListener('change', function(){
-    var date = this.value;
-    if (!date) return;
-    fetch('<?= basename(__FILE__) ?>?check_booked=1&date=' + encodeURIComponent(date))
-      .then(r => r.json())
-      .then(bookedIds => {
-        var set = new Set(bookedIds.map(String));
-        document.querySelectorAll('#personnelTable tbody tr').forEach(function(row){
-          var pid = row.dataset.personnelId || row.getAttribute('data-personnel-id') || row.querySelector('input.pers-check')?.value;
-          if (!pid) return;
-          pid = String(pid);
-          var checkbox = row.querySelector('input.pers-check');
-          if (set.has(pid)) {
-            row.classList.add('bg-red-50', 'opacity-80');
-            if (checkbox) { checkbox.checked = false; checkbox.disabled = true; checkbox.title = 'Booked on this date'; }
-          } else {
-            row.classList.remove('bg-red-50', 'opacity-80');
-            if (checkbox) { checkbox.disabled = false; checkbox.title = ''; }
-          }
-        });
-        updateTotal();
-      })
-      .catch(err => {
-        console.error('availability check failed', err);
-      });
-  });
+      subtotal += persSubtotal;
+    });
 
-  // Right panel sizing helper (safe: only if elements exist)
-  function adjustRightPanelHeight() {
-    const panel = document.getElementById('rightPanel');
-    const summary = document.getElementById('order-summary');
-    const footer = document.getElementById('summaryFooter');
-    if (!panel || !summary || !footer) return;
-    const panelHeight = panel.clientHeight;
-    const footerHeight = footer.offsetHeight;
-    summary.style.height = (panelHeight - footerHeight - 16) + 'px';
+    // ===================== DUCTED INSTALLATION =====================
+    document.querySelectorAll('.installation-qty').forEach(function (input) {
+      let qty = parseInt(input.value) || 0;
+      let row = input.closest('tr');
+      let price = parseFloat(row.dataset.price) || 0;
+      let sub = price * qty;
+
+      if (row.querySelector('.installation-subtotal')) {
+        row.querySelector('.installation-subtotal').textContent = sub.toFixed(2);
+      }
+
+      if (qty > 0) {
+        let type = row.querySelector('.install-type')?.value || '';
+        let model = type === 'indoor'
+          ? row.dataset.modelIndoor
+          : row.dataset.modelOutdoor;
+
+        summaryHTML += `
+          <div class="flex justify-between mb-1">
+            <span>${model} (${type}) x ${qty}</span>
+            <span>$${sub.toFixed(2)}</span>
+          </div>`;
+      }
+
+      subtotal += sub;
+    });
+
+    // ===================== EQUIPMENT =====================
+    document.querySelectorAll("#equipmentTable tbody tr").forEach(row => {
+      let qty = parseInt(row.querySelector(".equip-input")?.value) || 0;
+      let rate = parseFloat(row.dataset.rate) || 0;
+      let sub = qty * rate;
+
+      let cell = row.querySelector(".equip-subtotal");
+      if (cell) cell.textContent = sub.toFixed(2);
+
+      if (qty > 0) {
+        let name = row.querySelector(".equip-name")?.textContent.trim() || "Equipment";
+        summaryHTML += `
+          <div class="flex justify-between mb-1">
+            <span>${name} (x${qty})</span>
+            <span>$${sub.toFixed(2)}</span>
+          </div>`;
+      }
+
+      subtotal += sub;
+    });
+
+    // ===================== OTHER EXPENSES =====================
+    document.querySelectorAll(".other-expense-row").forEach(row => {
+      let name = row.querySelector(".expense-name").value.trim();
+      let amt = parseFloat(row.querySelector(".expense-amount").value) || 0;
+
+      if (amt > 0 && name !== "") {
+        summaryHTML += `
+          <div class="flex justify-between mb-1">
+            <span>${name}</span>
+            <span>$${amt.toFixed(2)}</span>
+          </div>`;
+      }
+
+      subtotal += amt;
+    });
+
+    // ===================== SHOW SUMMARY =====================
+    document.getElementById('order-summary').innerHTML =
+      summaryHTML || '<span style="color:#777;">No items selected.</span>';
+
+    // ===================== GST + TOTAL =====================
+    const gstRate = 0.10;
+    const gstAmount = subtotal * gstRate;
+    const grandTotal = subtotal + gstAmount;
+
+    document.getElementById('subtotalDisplay').textContent = subtotal.toFixed(2);
+    document.getElementById('taxAmount').textContent = gstAmount.toFixed(2);
+    document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
+
+    // ===================== PROFIT SUMMARY (unchanged) =====================
+    let profit = subtotal * 0.30;
+    let netProfitPercent = subtotal > 0 ? ((profit - gstAmount) / subtotal) * 100 : 0;
+    let profitMargin = (profit / subtotal) * 100;
+    let totalProfit = profit;
+
+    document.getElementById('profitDisplay').textContent = profit.toFixed(2);
+    document.getElementById('netProfitDisplay').textContent = netProfitPercent.toFixed(2);
+    document.getElementById('profitMarginDisplay').textContent = isFinite(profitMargin) ? profitMargin.toFixed(2) : "0.00";
+    document.getElementById('totalProfitDisplay').textContent = totalProfit.toFixed(2);
   }
-  window.addEventListener('load', adjustRightPanelHeight);
-  window.addEventListener('resize', adjustRightPanelHeight);
 
-  // initial total update
+  // =====================================================
+  // PERSONNEL PLUS / MINUS
+  // =====================================================
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
+      const rate = parseFloat(row.dataset.rate);
+      const input = row.querySelector(".hour-input");
+      const plus = row.querySelector(".hour-plus");
+      const minus = row.querySelector(".hour-minus");
+      const subtotalCell = row.querySelector(".pers-subtotal");
+      if (!input) return;
+
+      function updatePers() {
+        let hours = parseFloat(input.value) || 0;
+        subtotalCell.textContent = (rate * hours).toFixed(2);
+        updateTotal();
+      }
+
+      plus.addEventListener("click", () => {
+        input.value = parseInt(input.value || 0) + 1;
+        updatePers();
+      });
+
+      minus.addEventListener("click", () => {
+        input.value = Math.max(0, parseInt(input.value || 0) - 1);
+        updatePers();
+      });
+
+      input.addEventListener("input", updatePers);
+    });
+  });
+
+  // =====================================================
+  // EQUIPMENT PLUS / MINUS
+  // =====================================================
+  document.querySelectorAll(".equip-plus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      let row = btn.closest("tr");
+      let input = row.querySelector(".equip-input");
+      input.value = (parseInt(input.value) || 0) + 1;
+
+      let rate = parseFloat(row.dataset.rate) || 0;
+      row.querySelector(".equip-subtotal").textContent = (rate * input.value).toFixed(2);
+
+      updateTotal();
+    });
+  });
+
+  document.querySelectorAll(".equip-minus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      let row = btn.closest("tr");
+      let input = row.querySelector(".equip-input");
+      let current = parseInt(input.value) || 0;
+
+      if (current > 0) input.value = current - 1;
+
+      let rate = parseFloat(row.dataset.rate) || 0;
+      row.querySelector(".equip-subtotal").textContent = (rate * input.value).toFixed(2);
+
+      updateTotal();
+    });
+  });
+
+  document.querySelectorAll(".equip-input").forEach(input => {
+    input.addEventListener("input", () => {
+      let row = input.closest("tr");
+      let rate = parseFloat(row.dataset.rate) || 0;
+      let qty = parseInt(input.value) || 0;
+      row.querySelector(".equip-subtotal").textContent = (rate * qty).toFixed(2);
+      updateTotal();
+    });
+  });
+
+  // =====================================================
+  // OTHER EXPENSES — FIXED VERSION
+  // =====================================================
+  document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("otherExpensesContainer");
+    const addBtn = document.getElementById("addOtherExpenseBtn");
+
+    if (!container || !addBtn) return;
+
+    function addExpenseRow() {
+      const row = document.createElement("div");
+      row.classList.add("other-expense-row", "flex", "gap-2", "items-center", "mb-2");
+
+      row.innerHTML = `
+        <input type="text" class="expense-name border p-2 rounded flex-1" placeholder="Expense Name">
+        <input type="number" min="0" step="0.01" class="expense-amount border p-2 rounded w-24" placeholder="Amount">
+        <button type="button" class="remove-expense-btn text-red-500">
+          <span class="material-icons">close</span>
+        </button>
+      `;
+
+      container.appendChild(row);
+
+      row.querySelector(".remove-expense-btn").addEventListener("click", () => {
+        row.remove();
+        updateTotal();
+      });
+
+      row.querySelector(".expense-name").addEventListener("input", updateTotal);
+      row.querySelector(".expense-amount").addEventListener("input", updateTotal);
+    }
+
+    addBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      addExpenseRow();
+    });
+
+    // Start with one row
+    addExpenseRow();
+  });
+
+  // =====================================================
+  // GENERIC CHANGES
+  // =====================================================
+  document.addEventListener('change', function (e) {
+    if (
+      e.target.classList.contains('install-type') ||
+      e.target.classList.contains('split-qty') ||
+      e.target.classList.contains('installation-qty') ||
+      e.target.classList.contains('qty-input')
+    ) updateTotal();
+  });
+
+  document.querySelectorAll('input[type=number]').forEach(inp =>
+    inp.addEventListener('input', updateTotal)
+  );
+
+  // INITIAL LOAD
   updateTotal();
 
 })();
 </script>
+
 
 <?php
 $content = ob_get_clean();

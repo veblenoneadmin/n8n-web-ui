@@ -3,10 +3,6 @@ require "auth.php"; // Must be logged in
 require "config.php";
 require "layout.php";
 
-// Only admin can access
-if ($_SESSION['role'] !== 'admin') {
-    die("<h3 style='color:red; text-align:center; margin-top:40px;'>Access Denied: Admins Only</h3>");
-}
 
 $stmt = $pdo->query("
     SELECT 
@@ -65,7 +61,7 @@ if (empty($rows)) {
             <td class='p-2 text-center'>{$row['product_quantity']}</td>
             <td class='p-2 text-center'>{$row['personnel_count']}</td>
             <td class='p-2 text-center'>{$row['installation_count']}</td>
-            <td class='p-2 text-right'>₱" . number_format($row['total'], 2) . "</td>
+            <td class='p-2 text-right'>$" . number_format($row['total'], 2) . "</td>
         </tr>
         ";
     }

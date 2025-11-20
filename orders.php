@@ -50,7 +50,7 @@ ob_start();
   <h2 class="text-2xl font-semibold mb-4">Order Details</h2>
   <p><strong>Order No:</strong> <?= htmlspecialchars($order['order_number']) ?></p>
   <p><strong>Customer:</strong> <?= htmlspecialchars($order['customer_name']) ?> (<?= htmlspecialchars($order['customer_email']) ?>)</p>
-  <p><strong>Total:</strong> ₱<?= number_format($order['total_amount'], 2) ?></p>
+  <p><strong>Total:</strong> $<?= number_format($order['total_amount'], 2) ?></p>
 
   <h3 class="mt-6 text-lg font-semibold mb-2">Items</h3>
   <table class="w-full border-collapse border">
@@ -69,15 +69,15 @@ ob_start();
           <td class="border p-2"><?= ucfirst($it['item_type']) ?></td>
           <td class="border p-2"><?= htmlspecialchars(getItemName($pdo, $it['item_type'], $it['item_id'])) ?></td>
           <td class="border p-2"><?= htmlspecialchars($it['qty']) ?></td>
-          <td class="border p-2">₱<?= number_format($it['price'], 2) ?></td>
-          <td class="border p-2">₱<?= number_format($it['line_total'], 2) ?></td>
+          <td class="border p-2">$<?= number_format($it['price'], 2) ?></td>
+          <td class="border p-2">$<?= number_format($it['line_total'], 2) ?></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
 
   <div class="mt-6">
-    <a href="create_order.php" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Create New Order</a>
+    <a href="create_order.php" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send Invoice</a>
   </div>
 </div>
 

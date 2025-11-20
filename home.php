@@ -13,36 +13,35 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$currentUserId = $_SESSION['user_id'];
-$role = $_SESSION['role'] ?? 'user'; // default to 'user' if role not set
+$currentUserId = (int)$_SESSION['user_id'];
+$role = $_SESSION['role'] ?? 'user';
 $isAdmin = $role === 'admin';
 
-// ====================
-// Fetch Analytics Data
-// ====================
 try {
-    // Total Orders
+    // --------------------
+    // Analytics Data
+    // --------------------
     $totalOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders");
     $totalOrders = $totalOrdersStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    // Total number of clients
     $clientsStmt = $pdo->query("SELECT COUNT(*) AS total FROM customers");
     $totalClients = $clientsStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    // Total ducted installations
     $ductedStmt = $pdo->query("SELECT COUNT(*) AS total FROM ductedinstallations");
     $totalDuctedInstallations = $ductedStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    // Total split installations
     $splitStmt = $pdo->query("SELECT COUNT(*) AS total FROM split_installation");
     $totalSplitInstallations = $splitStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    // Optional: total installations (sum of ducted + split)
     $totalInstallations = $totalDuctedInstallations + $totalSplitInstallations;
 
-    // ====================
-    // Fetch Activity Logs
-    // ====================
+    // Optional: pending orders
+    $pendingOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders WHERE status = 'pending'");
+    $pendingOrders = $pendingOrdersStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+    // --------------------
+    // Activity Logs
+    // --------------------
     if ($isAdmin) {
         $activityStmt = $pdo->prepare("
             SELECT l.created_at, u.name AS user_name, l.action, l.reference_type, l.reference_id
@@ -70,9 +69,9 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
-// ====================
-// Build Page Content
-// ====================
+// --------------------
+// Page Content
+// --------------------
 ob_start();
 ?>
 
@@ -95,7 +94,7 @@ ob_start();
 
     <div class="bg-white rounded-xl shadow p-5 flex flex-col">
         <h3 class="text-gray-500 font-medium text-sm">Pending Orders</h3>
-        <p class="text-2xl font-bold text-gray-800 mt-2"><?= $pendingOrders ?? 0 ?></p>
+        <p class="text-2xl font-bold text-gray-800 mt-2"><?= $pendingOrders ?></p>
     </div>
 </div>
 

@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_SESSION['name']    = $user['name'];
         $_SESSION['role']    = $user['role'];
 
-        header("Location: home.php");
+        header("Location: home");
         exit;
     } else {
         $error = "Invalid email or password.";
@@ -126,7 +126,7 @@ button:hover {
 <body>
 
 <div class="login-container">
-    <h2>🔐 Sign In</h2>
+    <h2>Signin</h2>
 
     <?php if ($error): ?>
         <div class="error"><?= $error ?></div>
