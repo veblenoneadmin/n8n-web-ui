@@ -94,7 +94,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <div class="border-b border-gray-200 mt-1"></div>
 
     <!-- NAV ITEMS -->
-    <a href="home" class="sidebar-link <?= $activePage=="home"?"sidebar-active":"" ?>"><span class="material-icons">dashboard</span> Home</a>
+    <a href="index" class="sidebar-link <?= $activePage=="index"?"sidebar-active":"" ?>"><span class="material-icons">dashboard</span> Home</a>
     <a href="create_order" class="sidebar-link <?= $activePage=="create_order"?"sidebar-active":"" ?>"><span class="material-icons">add_shopping_cart</span> Create Order</a>
     <a href="order_history" class="sidebar-link <?= $activePage=="orders"?"sidebar-active":"" ?>"><span class="material-icons">receipt_long</span> Orders</a>
     <a href="personnel" class="sidebar-link <?= $activePage=="personnel"?"sidebar-active":"" ?>"><span class="material-icons">people_alt</span> Personnel</a>
