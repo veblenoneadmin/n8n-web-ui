@@ -1,11 +1,12 @@
 <?php
-$host = 'localhost';
-$db   = 'multi_order_invoice';  // your DB name
-$user = 'root';             // your MySQL username
-$pass = '';                 // your MySQL password (leave blank for default XAMPP)
+$host = 'shortline.proxy.rlwy.net';           // Railway MySQL host
+$port = 31315;                                // Railway MySQL port
+$db   = 'railway';                            // Railway database name
+$user = 'root';                               // Railway username
+$pass = 'rVkBsGReslMeafTlzATAlrIvbCPWSbaY';  // Railway password
 $charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
 
 try {
     $pdo = new PDO($dsn, $user, $pass, [
