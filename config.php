@@ -29,16 +29,22 @@ class MySQLSessionHandler implements SessionHandlerInterface {
     private PDO $pdo;
     private string $table = 'sessions';
 
-    public function __construct(PDO $pdo) { $this->pdo = $pdo; }
+    public function __construct(PDO $pdo) {
+        $this->pdo = $pdo;
+    }
 
     #[\ReturnTypeWillChange]
-    public function open($savePath, $sessionName) { return true; }
+    public function open($savePath, $sessionName): bool {
+        return true;
+    }
 
     #[\ReturnTypeWillChange]
-    public function close() { return true; }
+    public function close(): bool {
+        return true;
+    }
 
     #[\ReturnTypeWillChange]
-    public function read($id) {
+    public function read($id): string {
         $stmt = $this->pdo->prepare("SELECT data FROM {$this->table} WHERE id=?");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
@@ -46,7 +52,7 @@ class MySQLSessionHandler implements SessionHandlerInterface {
     }
 
     #[\ReturnTypeWillChange]
-    public function write($id, $data) {
+    public function write($id, $data): bool {
         $stmt = $this->pdo->prepare("
             INSERT INTO {$this->table} (id, data, last_access)
             VALUES (?, ?, NOW())
@@ -56,11 +62,32 @@ class MySQLSessionHandler implements SessionHandlerInterface {
     }
 
     #[\ReturnTypeWillChange]
-    public function destroy($id) {
+    public function destroy($id): bool {
         $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE id=?");
         return $stmt->execute([$id]);
     }
 
     #[\ReturnTypeWillChange]
-    public function gc($max_lifetime) {
-        $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE last_access < NOW_
+    public function gc($max_lifetime): int|false {
+        $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE last_access < NOW() - INTERVAL ? SECOND");
+        $stmt->execute([$max_lifetime]);
+        return $stmt->rowCount();
+    }
+}
+
+// Initialize the session handler
+$handler = new MySQLSessionHandler($pdo);
+session_set_save_handler($handler, true);
+
+// Session cookie parameters (must be before session_start)
+session_name("n8n_session");
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => $_SERVER['HTTP_HOST'],
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
+session_start();
