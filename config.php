@@ -21,11 +21,15 @@ try {
 }
 
 // -----------------------------
-// Session Configuration
+// SESSION CONFIGURATION FOR RAILWAY
 // -----------------------------
-$hostDomain = $_SERVER['HTTP_HOST']; // dynamic domain
+
+// Force session to write in a writable temp folder
+session_save_path(sys_get_temp_dir());
 
 session_name("n8n_session");
+$hostDomain = $_SERVER['HTTP_HOST'];
+
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
