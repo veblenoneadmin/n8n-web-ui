@@ -4,6 +4,12 @@ require_once "config.php";
 
 $error = "";
 
+// Redirect already logged-in users to index.php
+if (isset($_SESSION['user_id'])) {
+    header("Location: index.php");
+    exit;
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
@@ -12,12 +18,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && $password === $user['password']) { // plain text temp
+    // Verify password (if passwords are plain text, you can use === temporarily)
+    if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
         $_SESSION['role']    = $user['role'];
 
-        header("Location: index");
+        header("Location: index.php");
         exit;
     } else {
         $error = "Invalid email or password.";
@@ -26,8 +33,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <title>Login</title>
 <style>
 body {
@@ -66,7 +74,7 @@ body {
     margin-bottom: 15px;
     display: flex;
     flex-direction: column;
-    align-items: center; /* center the inputs inside the group */
+    align-items: center;
 }
 
 .input-group label {
@@ -74,11 +82,11 @@ body {
     font-weight: 500;
     margin-bottom: 6px;
     color: #555;
-    align-self: flex-start; /* label stays left */
+    align-self: flex-start;
 }
 
 .input-group input {
-    width: 80%; /* input smaller than full width */
+    width: 80%;
     max-width: 300px;
     padding: 12px;
     border: 1px solid #ccd0d5;
@@ -129,7 +137,7 @@ button:hover {
     <h2>Signin</h2>
 
     <?php if ($error): ?>
-        <div class="error"><?= $error ?></div>
+        <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="post">
