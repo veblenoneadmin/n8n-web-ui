@@ -2,12 +2,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/layout.php';
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Check if user is logged in
+// Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
