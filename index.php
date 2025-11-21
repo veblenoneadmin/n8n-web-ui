@@ -1,9 +1,8 @@
 <?php
-session_start();
 require_once "config.php";
-require_once "layout.php";
 
-if (!isset($_SESSION["user_id"])) {
+// Redirect if not logged in
+if (empty($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
@@ -16,54 +15,44 @@ try {
     $totalOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders");
     $totalOrders = $totalOrdersStmt->fetch()['total'] ?? 0;
 
-    $clientsStmt = $pdo->query("SELECT COUNT(*) AS total FROM customers");
-    $totalClients = $clientsStmt->fetch()['total'] ?? 0;
+    $totalClientsStmt = $pdo->query("SELECT COUNT(*) AS total FROM customers");
+    $totalClients = $totalClientsStmt->fetch()['total'] ?? 0;
 
     $ductedStmt = $pdo->query("SELECT COUNT(*) AS total FROM ductedinstallations");
-    $totalDuctedInstallations = $ductedStmt->fetch()['total'] ?? 0;
+    $totalDucted = $ductedStmt->fetch()['total'] ?? 0;
 
     $splitStmt = $pdo->query("SELECT COUNT(*) AS total FROM split_installation");
-    $totalSplitInstallations = $splitStmt->fetch()['total'] ?? 0;
+    $totalSplit = $splitStmt->fetch()['total'] ?? 0;
 
-    $totalInstallations = $totalDuctedInstallations + $totalSplitInstallations;
+    $totalInstallations = $totalDucted + $totalSplit;
 
-    $pendingOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders WHERE status = 'pending'");
+    $pendingOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders WHERE status='pending'");
     $pendingOrders = $pendingOrdersStmt->fetch()['total'] ?? 0;
-
-    if ($isAdmin) {
-        $activityStmt = $pdo->prepare("
-            SELECT l.created_at, u.name AS user_name, l.action, l.reference_type, l.reference_id
-            FROM activity_logs l
-            JOIN users u ON u.id = l.user_id
-            ORDER BY l.created_at DESC
-            LIMIT 10
-        ");
-        $activityStmt->execute();
-    } else {
-        $activityStmt = $pdo->prepare("
-            SELECT l.created_at, u.name AS user_name, l.action, l.reference_type, l.reference_id
-            FROM activity_logs l
-            JOIN users u ON u.id = l.user_id
-            WHERE l.user_id = ?
-            ORDER BY l.created_at DESC
-            LIMIT 10
-        ");
-        $activityStmt->execute([$currentUserId]);
-    }
-
-    $activities = $activityStmt->fetchAll();
-} catch (PDOException $e) {
+} catch(PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
 
-ob_start();
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<style>
+body { font-family:sans-serif; margin:0; padding:0; background:#f8f9fa; }
+.container { max-width:900px; margin:40px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+h1 { margin-bottom:20px; }
+.card { padding:15px; border-radius:8px; background:#eef2f7; margin-bottom:15px; }
+</style>
+</head>
+<body>
+<div class="container">
 <h1>Welcome, <?= htmlspecialchars($_SESSION['name']); ?></h1>
-<p>Total Orders: <?= $totalOrders ?></p>
-<p>Total Installations: <?= $totalInstallations ?></p>
-<p>Total Clients: <?= $totalClients ?></p>
-<p>Pending Orders: <?= $pendingOrders ?></p>
-<?php
-$content = ob_get_clean();
-renderLayout("Dashboard", $content, "home");
-?>
+<div class="card">Total Orders: <?= $totalOrders ?></div>
+<div class="card">Total Installations: <?= $totalInstallations ?></div>
+<div class="card">Total Clients: <?= $totalClients ?></div>
+<div class="card">Pending Orders: <?= $pendingOrders ?></div>
+<a href="logout.php">Logout</a>
+</div>
+</body>
+</html>

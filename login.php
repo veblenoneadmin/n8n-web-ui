@@ -1,23 +1,22 @@
 <?php
 require_once "config.php";
 
-$error = "";
-
 // Redirect if already logged in
 if (!empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
 }
 
+$error = "";
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
 
-    $stmt = $pdo->prepare("SELECT id, name, email, password, role FROM users WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT id, name, email, password, role FROM users WHERE email=?");
     $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = $stmt->fetch();
 
-    // If passwords are hashed
     if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
@@ -36,49 +35,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <meta charset="UTF-8">
 <title>Login</title>
 <style>
-body {
-    margin: 0;
-    font-family: "Inter", sans-serif;
-    background: linear-gradient(135deg, #4b79a1, #283e51);
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #333;
-}
-.login-container {
-    background: #fff;
-    width: 400px;
-    padding: 40px 30px;
-    border-radius: 14px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-    text-align: center;
-}
-.input-group { margin-bottom: 15px; }
-.input-group input { width: 80%; max-width: 300px; padding: 12px; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; }
-button { width: 80%; max-width: 300px; padding: 12px; background: #0066ff; border: none; border-radius: 8px; color: #fff; cursor: pointer; margin-top: 10px; }
-button:hover { background: #0052cc; }
-.error { background: #ffe4e4; color: #c53030; padding: 8px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; border: 1px solid #ffbdbd; }
+body { margin:0; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; background:#f0f0f0; }
+.login-container { background:#fff; padding:40px; border-radius:12px; width:350px; box-shadow:0 6px 18px rgba(0,0,0,0.1); text-align:center; }
+input { width:80%; padding:10px; margin:10px 0; border-radius:6px; border:1px solid #ccc; }
+button { width:80%; padding:10px; border:none; border-radius:6px; background:#007bff; color:#fff; cursor:pointer; }
+button:hover { background:#0056b3; }
+.error { color:red; font-size:14px; margin-bottom:10px; }
 </style>
 </head>
 <body>
-
 <div class="login-container">
-    <h2>Signin</h2>
-    <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <form method="post">
-        <div class="input-group">
-            <input type="email" name="email" placeholder="Enter your email" required>
-        </div>
-        <div class="input-group">
-            <input type="password" name="password" placeholder="Enter your password" required>
-        </div>
-        <button type="submit">Login</button>
-    </form>
+<h2>Login</h2>
+<?php if($error): ?>
+    <div class="error"><?= htmlspecialchars($error) ?></div>
+<?php endif; ?>
+<form method="post">
+<input type="email" name="email" placeholder="Email" required>
+<input type="password" name="password" placeholder="Password" required>
+<button type="submit">Login</button>
+</form>
 </div>
-
 </body>
 </html>
