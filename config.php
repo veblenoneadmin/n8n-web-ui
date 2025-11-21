@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 // -----------------------------
 // Database Configuration
 // -----------------------------
@@ -24,25 +26,31 @@ try {
 // Database-backed PHP sessions
 // -----------------------------
 class MySQLSessionHandler implements SessionHandlerInterface {
-    private $pdo;
-    private $table;
 
-    public function __construct(PDO $pdo, $table = 'sessions') {
+    private PDO $pdo;
+    private string $table;
+
+    public function __construct(PDO $pdo, string $table = 'sessions') {
         $this->pdo = $pdo;
         $this->table = $table;
     }
 
-    public function open($savePath, $sessionName) { return true; }
-    public function close() { return true; }
+    #[\ReturnTypeWillChange]
+    public function open(string $savePath, string $sessionName): bool { return true; }
 
-    public function read($id) {
+    #[\ReturnTypeWillChange]
+    public function close(): bool { return true; }
+
+    #[\ReturnTypeWillChange]
+    public function read(string $id): string|false {
         $stmt = $this->pdo->prepare("SELECT data FROM {$this->table} WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $row['data'] : '';
     }
 
-    public function write($id, $data) {
+    #[\ReturnTypeWillChange]
+    public function write(string $id, string $data): bool {
         $stmt = $this->pdo->prepare("
             INSERT INTO {$this->table} (id, data, last_access)
             VALUES (?, ?, NOW())
@@ -51,22 +59,25 @@ class MySQLSessionHandler implements SessionHandlerInterface {
         return $stmt->execute([$id, $data, $data]);
     }
 
-    public function destroy($id) {
+    #[\ReturnTypeWillChange]
+    public function destroy(string $id): bool {
         $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
-    public function gc($maxlifetime) {
+    #[\ReturnTypeWillChange]
+    public function gc(int $max_lifetime): int|false {
         $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE last_access < NOW() - INTERVAL ? SECOND");
-        return $stmt->execute([$maxlifetime]);
+        $stmt->execute([$max_lifetime]);
+        return $stmt->rowCount();
     }
 }
 
-// Set session handler
+// Initialize the session handler
 $handler = new MySQLSessionHandler($pdo);
 session_set_save_handler($handler, true);
 
-// Session cookie parameters
+// Session cookie parameters (must be before session_start)
 session_name("n8n_session");
 session_set_cookie_params([
     'lifetime' => 0,
