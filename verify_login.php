@@ -17,12 +17,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
 
-        header("Location: home.php");
+        header("Location: index");
         exit;
 
     } else {
         $_SESSION['login_error'] = "Invalid email or password!";
-        header("Location: login.php");
+        header("Location: login");
         exit;
     }
 }

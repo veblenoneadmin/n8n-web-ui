@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/layout.php';
+session_start();
+require_once "config.php";
+require_once "layout.php";
 
-// Redirect if not logged in
-if (empty($_SESSION['user_id'])) {
+if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit;
 }
