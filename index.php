@@ -1,15 +1,16 @@
 <?php
+session_start();
+
+// Force a default user for testing
+$_SESSION['user_id'] = 1;
+$_SESSION['name'] = 'Admin';
+$_SESSION['role'] = 'admin';
+
 require_once "config.php";
+require_once "layout.php";
 
-// Redirect if not logged in
-if (empty($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
-
-$currentUserId = (int)$_SESSION['user_id'];
-$role = $_SESSION['role'] ?? 'user';
-$isAdmin = $role === 'admin';
+// You can now skip the login check
+// if (empty($_SESSION['user_id'])) { ... }
 
 try {
     $totalOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders");
