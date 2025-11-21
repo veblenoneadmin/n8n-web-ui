@@ -1,4 +1,10 @@
-
+<?php
+function renderLayout(string $title, string $content, string $activePage = ""): void {
+    $titleEsc = htmlspecialchars($title);
+    $user = htmlspecialchars($_SESSION['name'] ?? 'Guest');
+    $initial = strtoupper(substr($user, 0, 1));
+    $role = $_SESSION['role'] ?? 'user';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
