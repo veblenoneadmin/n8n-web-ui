@@ -3,7 +3,7 @@ require_once "config.php";
 
 $error = "";
 
-// Redirect logged-in users to dashboard
+// Redirect if already logged in
 if (!empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Check password (hashed passwords recommended)
+    // If passwords are hashed
     if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
@@ -36,7 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <meta charset="UTF-8">
 <title>Login</title>
 <style>
-/* same CSS as before */
 body {
     margin: 0;
     font-family: "Inter", sans-serif;
@@ -55,49 +54,17 @@ body {
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
     text-align: center;
 }
-.input-group {
-    margin-bottom: 15px;
-}
-.input-group input {
-    width: 80%;
-    max-width: 300px;
-    padding: 12px;
-    border: 1px solid #ccd0d5;
-    border-radius: 8px;
-    font-size: 14px;
-}
-button {
-    width: 80%;
-    max-width: 300px;
-    padding: 12px;
-    background: #0066ff;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    color: #fff;
-    margin-top: 10px;
-}
-button:hover {
-    background: #0052cc;
-}
-.error {
-    background: #ffe4e4;
-    color: #c53030;
-    padding: 8px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    font-size: 14px;
-    border: 1px solid #ffbdbd;
-}
+.input-group { margin-bottom: 15px; }
+.input-group input { width: 80%; max-width: 300px; padding: 12px; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; }
+button { width: 80%; max-width: 300px; padding: 12px; background: #0066ff; border: none; border-radius: 8px; color: #fff; cursor: pointer; margin-top: 10px; }
+button:hover { background: #0052cc; }
+.error { background: #ffe4e4; color: #c53030; padding: 8px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; border: 1px solid #ffbdbd; }
 </style>
 </head>
 <body>
 
 <div class="login-container">
     <h2>Signin</h2>
-
     <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>

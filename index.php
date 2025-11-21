@@ -2,7 +2,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/layout.php';
 
-// Redirect to login if session not set
+// Redirect if not logged in
 if (empty($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -50,6 +50,7 @@ try {
         ");
         $activityStmt->execute([$currentUserId]);
     }
+
     $activities = $activityStmt->fetchAll();
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
