@@ -1,50 +1,62 @@
 <?php
 session_start();
 
-// Force a default user for testing
-$_SESSION['user_id'] = 1;
-$_SESSION['name'] = 'Admin';
-$_SESSION['role'] = 'admin';
+// ---------------------------
+// Force a default user for testing (no login required)
+$_SESSION['user_id'] = $_SESSION['user_id'] ?? 0;
+$_SESSION['name'] = $_SESSION['name'] ?? 'Guest';
+$_SESSION['role'] = $_SESSION['role'] ?? 'user';
 
 require_once "config.php";
 require_once "layout.php";
 
+// ---------------------------
+// User info
+$currentUserId = $_SESSION['user_id'];
+$role = $_SESSION['role'];
+$isAdmin = $role === 'admin';
+
+// ---------------------------
+// Analytics & Activity Log
+$totalOrders = 0;
+$totalClients = 0;
+$totalDuctedInstallations = 0;
+$totalSplitInstallations = 0;
+$totalInstallations = 0;
+$pendingOrders = 0;
+$activities = [];
+
 try {
-    // --------------------
-    // Analytics Data
-    // --------------------
-    $totalOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders");
-    $totalOrders = $totalOrdersStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+    // Analytics
+    $stmt = $pdo->query("SELECT COUNT(*) AS total FROM orders");
+    $totalOrders = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    $clientsStmt = $pdo->query("SELECT COUNT(*) AS total FROM customers");
-    $totalClients = $clientsStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+    $stmt = $pdo->query("SELECT COUNT(*) AS total FROM customers");
+    $totalClients = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    $ductedStmt = $pdo->query("SELECT COUNT(*) AS total FROM ductedinstallations");
-    $totalDuctedInstallations = $ductedStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+    $stmt = $pdo->query("SELECT COUNT(*) AS total FROM ductedinstallations");
+    $totalDuctedInstallations = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    $splitStmt = $pdo->query("SELECT COUNT(*) AS total FROM split_installation");
-    $totalSplitInstallations = $splitStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+    $stmt = $pdo->query("SELECT COUNT(*) AS total FROM split_installation");
+    $totalSplitInstallations = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
     $totalInstallations = $totalDuctedInstallations + $totalSplitInstallations;
 
-    // Optional: pending orders
-    $pendingOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders WHERE status = 'pending'");
-    $pendingOrders = $pendingOrdersStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+    $stmt = $pdo->query("SELECT COUNT(*) AS total FROM orders WHERE status = 'pending'");
+    $pendingOrders = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-    // --------------------
-    // Activity Logs
-    // --------------------
+    // Activity Log
     if ($isAdmin) {
-        $activityStmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
             SELECT l.created_at, u.name AS user_name, l.action, l.reference_type, l.reference_id
             FROM activity_logs l
             JOIN users u ON u.id = l.user_id
             ORDER BY l.created_at DESC
             LIMIT 10
         ");
-        $activityStmt->execute();
+        $stmt->execute();
     } else {
-        $activityStmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
             SELECT l.created_at, u.name AS user_name, l.action, l.reference_type, l.reference_id
             FROM activity_logs l
             JOIN users u ON u.id = l.user_id
@@ -52,18 +64,18 @@ try {
             ORDER BY l.created_at DESC
             LIMIT 10
         ");
-        $activityStmt->execute([$currentUserId]);
+        $stmt->execute([$currentUserId]);
     }
-
-    $activities = $activityStmt->fetchAll(PDO::FETCH_ASSOC);
+    $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    die("Database error: " . $e->getMessage());
+    // Use default placeholder data if DB fails
+    $totalOrders = $totalClients = $totalInstallations = $pendingOrders = 0;
+    $activities = [];
 }
 
-// --------------------
+// ---------------------------
 // Page Content
-// --------------------
 ob_start();
 ?>
 
@@ -109,27 +121,17 @@ ob_start();
                 <?php if (!empty($activities)): ?>
                     <?php foreach ($activities as $log): ?>
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2 border-b font-medium text-gray-700">
-                                <?= htmlspecialchars($log['user_name']); ?>
-                            </td>
+                            <td class="px-4 py-2 border-b font-medium text-gray-700"><?= htmlspecialchars($log['user_name']) ?></td>
+                            <td class="px-4 py-2 border-b text-gray-600"><?= htmlspecialchars($log['action']) ?></td>
                             <td class="px-4 py-2 border-b text-gray-600">
-                                <?= htmlspecialchars($log['action']); ?>
+                                <?= $log['reference_type'] ? ucfirst($log['reference_type']) . " #{$log['reference_id']}" : '—' ?>
                             </td>
-                            <td class="px-4 py-2 border-b text-gray-600">
-                                <?= $log['reference_type'] 
-                                    ? ucfirst($log['reference_type']) . " #{$log['reference_id']}" 
-                                    : '—'; ?>
-                            </td>
-                            <td class="px-4 py-2 border-b text-gray-500">
-                                <?= date("M d, Y h:i A", strtotime($log['created_at'])); ?>
-                            </td>
+                            <td class="px-4 py-2 border-b text-gray-500"><?= date("M d, Y h:i A", strtotime($log['created_at'])) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="4" class="px-4 py-3 text-center text-gray-500">
-                            No activity recorded yet.
-                        </td>
+                        <td colspan="4" class="px-4 py-3 text-center text-gray-500">No activity recorded yet.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
@@ -139,5 +141,5 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-renderLayout("Home", $content, "home");
+renderLayout("Dashboard", $content, "index");
 ?>
