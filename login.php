@@ -3,7 +3,7 @@ require_once "config.php";
 
 $error = "";
 
-// Redirect already logged-in users
+// Redirect logged-in users to dashboard
 if (!empty($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Password check (hashed password recommended)
+    // Check password (hashed passwords recommended)
     if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
@@ -30,14 +30,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Login</title>
 <style>
-/* your existing CSS from before */
+/* same CSS as before */
 body {
     margin: 0;
     font-family: "Inter", sans-serif;
@@ -55,22 +54,9 @@ body {
     border-radius: 14px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
     text-align: center;
-    animation: fadeIn 0.4s ease-in-out;
-}
-@keyframes fadeIn {
-    from {opacity: 0; transform: translateY(15px);}
-    to   {opacity: 1; transform: translateY(0);}
-}
-.login-container h2 {
-    font-weight: 600;
-    margin-bottom: 25px;
-    color: #2d3748;
 }
 .input-group {
     margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 .input-group input {
     width: 80%;
@@ -79,12 +65,6 @@ body {
     border: 1px solid #ccd0d5;
     border-radius: 8px;
     font-size: 14px;
-    transition: 0.25s;
-}
-.input-group input:focus {
-    border-color: #3182ce;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(49,130,206,0.2);
 }
 button {
     width: 80%;
@@ -97,7 +77,6 @@ button {
     font-weight: 500;
     cursor: pointer;
     color: #fff;
-    transition: 0.20s;
     margin-top: 10px;
 }
 button:hover {
@@ -127,11 +106,9 @@ button:hover {
         <div class="input-group">
             <input type="email" name="email" placeholder="Enter your email" required>
         </div>
-
         <div class="input-group">
             <input type="password" name="password" placeholder="Enter your password" required>
         </div>
-
         <button type="submit">Login</button>
     </form>
 </div>

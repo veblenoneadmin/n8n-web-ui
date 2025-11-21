@@ -2,7 +2,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/layout.php';
 
-// Redirect to login if not logged in
+// Redirect to login if session not set
 if (empty($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -30,7 +30,6 @@ try {
     $pendingOrdersStmt = $pdo->query("SELECT COUNT(*) AS total FROM orders WHERE status = 'pending'");
     $pendingOrders = $pendingOrdersStmt->fetch()['total'] ?? 0;
 
-    // Activity logs
     if ($isAdmin) {
         $activityStmt = $pdo->prepare("
             SELECT l.created_at, u.name AS user_name, l.action, l.reference_type, l.reference_id
@@ -58,14 +57,11 @@ try {
 
 ob_start();
 ?>
-
-<!-- Your HTML dashboard content here -->
 <h1>Welcome, <?= htmlspecialchars($_SESSION['name']); ?></h1>
 <p>Total Orders: <?= $totalOrders ?></p>
 <p>Total Installations: <?= $totalInstallations ?></p>
 <p>Total Clients: <?= $totalClients ?></p>
 <p>Pending Orders: <?= $pendingOrders ?></p>
-
 <?php
 $content = ob_get_clean();
 renderLayout("Dashboard", $content, "home");
