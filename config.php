@@ -1,4 +1,7 @@
 <?php
+// -----------------------------
+// Database Configuration
+// -----------------------------
 $host = 'shortline.proxy.rlwy.net';
 $port = 31315;
 $db   = 'railway';
@@ -17,14 +20,21 @@ try {
     die('Database connection failed: ' . $e->getMessage());
 }
 
-// Session settings for Railway
+// -----------------------------
+// Session Configuration
+// -----------------------------
+$hostDomain = $_SERVER['HTTP_HOST']; // dynamic domain
+
 session_name("n8n_session");
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
-    'domain' => '.railway.app',  // ensures cookie works for Railway domain
+    'domain' => $hostDomain,
     'secure' => true,
     'httponly' => true,
     'samesite' => 'Lax'
 ]);
-session_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
