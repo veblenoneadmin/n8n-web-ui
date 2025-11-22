@@ -1,17 +1,23 @@
-# Use PHP 8.2 with Apache
+# Use the official PHP image with Apache
 FROM php:8.2-apache
 
-# Enable PHP extensions for MySQL
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+# Enable Apache rewrite module
+RUN a2enmod rewrite
 
-# Copy your project files into the web root
+# Copy your project into the container
 COPY . /var/www/html/
 
-# Set proper permissions (optional but recommended)
+# Set working directory
+WORKDIR /var/www/html/
+
+# Install PDO MySQL extension
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Set proper permissions (optional)
 RUN chown -R www-data:www-data /var/www/html
 
 # Expose port 80
 EXPOSE 80
 
-# Start Apache in foreground
+# Start Apache in the foreground
 CMD ["apache2-foreground"]
