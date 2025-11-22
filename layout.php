@@ -18,37 +18,25 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 
     <style>
         body { background: #f8f9fa; font-family: "Roboto", sans-serif; }
+        .sidebar-link { display:flex; align-items:center; padding-top:5px; gap:12px; border-radius:8px;
+                        font-weight:500; color:#64748B; transition:0.25s; }
+        .sidebar-link .material-icons { font-size:20px; color:#94A3B8; }
+        .sidebar-link:hover { background:#EEF2F7; color:#475569; }
+        .sidebar-link:hover .material-icons { color:#475569; }
+        .sidebar-active { background:#4F46E5; color:#fff !important; }
+        .sidebar-active .material-icons { color:white !important; }
 
-        /* Sidebar */
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            padding-top: 5px;
-            gap: 12px;
-            border-radius: 8px;
-            font-weight: 500;
-            color: #64748B;
-            transition: 0.25s;
-        }
-        .sidebar-link .material-icons { font-size: 20px; color: #94A3B8; }
-        .sidebar-link:hover { background: #EEF2F7; color: #475569; }
-        .sidebar-link:hover .material-icons { color: #475569; }
-        .sidebar-active { background: #4F46E5; color: #fff !important; }
-        .sidebar-active .material-icons { color: white !important; }
+        .dropdown-show { display:block !important; animation:fadeIn .15s ease-in-out; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(-3px);} to{opacity:1;transform:translateY(0);} }
 
-        /* Dropdown animation */
-        .dropdown-show { display: block !important; animation: fadeIn .15s ease-in-out; }
-        @keyframes fadeIn { from { opacity:0; transform: translateY(-3px);} to { opacity:1; transform:translateY(0); } }
-
-        /* Tables */
-        table th { height: 42px; line-height: 42px; text-align: center; font-size: 15px !important; }
-        table td { font-size: 14px; vertical-align: middle; text-align: center; }
-        table th:first-child, table td:first-child { text-align: left; padding-left: 0.75rem; }
-        #productsTable, #personnelTable, #ductedInstallationsTable { font-size: 13px; }
-        .qty-input, .installation-qty { font-size: 13px; height: 28px; }
-        .plus-btn, .minus-btn { font-size: 12px; padding: 2px 6px; }
-        .pers-check { transform: scale(0.9); }
-        #appointment_date::placeholder { color: #999999; opacity: 1; }
+        table th { height:42px; line-height:42px; text-align:center; font-size:15px !important; }
+        table td { font-size:14px; vertical-align:middle; text-align:center; }
+        table th:first-child, table td:first-child { text-align:left; padding-left:.75rem; }
+        #productsTable, #personnelTable, #ductedInstallationsTable { font-size:13px; }
+        .qty-input, .installation-qty { font-size:13px; height:28px; }
+        .plus-btn, .minus-btn { font-size:12px; padding:2px 6px; }
+        .pers-check { transform:scale(0.9); }
+        #appointment_date::placeholder { color:#999; opacity:1; }
     </style>
 </head>
 
@@ -83,13 +71,25 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
             </a>
         </div>
     </div>
+
     <div class="border-b border-gray-200 mt-1"></div>
 
-    <!-- NAV ITEMS -->
-    <a href="/index.php" class="sidebar-link <?= $activePage=="index"?"sidebar-active":"" ?>"><span class="material-icons">dashboard</span> Home</a>
-    <a href="/create_order.php" class="sidebar-link <?= $activePage=="create_order"?"sidebar-active":"" ?>"><span class="material-icons">add_shopping_cart</span> Create Order</a>
-    <a href="/order_history.php" class="sidebar-link <?= $activePage=="orders"?"sidebar-active":"" ?>"><span class="material-icons">receipt_long</span> Orders</a>
-    <a href="/personnel.php" class="sidebar-link <?= $activePage=="personnel"?"sidebar-active":"" ?>"><span class="material-icons">people_alt</span> Personnel</a>
+    <!-- NAV ITEMS (FIXED LINKS) -->
+    <a href="index.php" class="sidebar-link <?= $activePage=='index'?'sidebar-active':'' ?>">
+        <span class="material-icons">dashboard</span> Home
+    </a>
+
+    <a href="create_order.php" class="sidebar-link <?= $activePage=='create_order'?'sidebar-active':'' ?>">
+        <span class="material-icons">add_shopping_cart</span> Create Order
+    </a>
+
+    <a href="orders.php" class="sidebar-link <?= $activePage=='orders'?'sidebar-active':'' ?>">
+        <span class="material-icons">receipt_long</span> Orders
+    </a>
+
+    <a href="personnel.php" class="sidebar-link <?= $activePage=='personnel'?'sidebar-active':'' ?>">
+        <span class="material-icons">people_alt</span> Personnel
+    </a>
 
     <!-- PRODUCTS DROPDOWN -->
     <div class="w-full">
@@ -100,14 +100,15 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
             </div>
             <span class="material-icons text-gray-500">expand_more</span>
         </button>
+
         <div id="productsMenu" class="hidden mt-1 rounded-lg">
-            <a href="products" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+            <a href="products.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">electrical_services</span> Electrical Items
             </a>
-            <a href="ducted_installations" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+            <a href="ducted_installations.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">view_in_ar</span> Ducted Installations
             </a>
-            <a href="split_installations" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+            <a href="split_installations.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">ac_unit</span> Split System Installation
             </a>
         </div>
@@ -123,14 +124,17 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
             </div>
             <span class="material-icons text-gray-500">expand_more</span>
         </button>
+
         <div id="settingsMenu" class="hidden mt-1 rounded-lg">
             <button id="openTaxModal" class="w-full text-left flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">percent</span> Tax
             </button>
-            <a href="gst" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+            <a href="gst.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">receipt_long</span> GST
             </a>
-            <a href="users" class="sidebar-link <?= $activePage=="users"?"sidebar-active":"" ?>"><span class="material-icons">people_alt</span> Users</a>
+            <a href="users.php" class="sidebar-link <?= $activePage=='users'?'sidebar-active':'' ?>">
+                <span class="material-icons">people_alt</span> Users
+            </a>
         </div>
     </div>
     <?php endif; ?>
@@ -138,15 +142,15 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 
 <!-- Dropdown Script -->
 <script>
-    document.getElementById("productsToggleBtn").onclick = () => {
-        document.getElementById("productsMenu").classList.toggle("hidden");
-    }
-    document.getElementById("userToggleBtn").onclick = () => {
-        document.getElementById("userMenu").classList.toggle("hidden");
-    }
-    document.getElementById("settingsToggleBtn")?.addEventListener("click", () => {
-        document.getElementById("settingsMenu").classList.toggle("hidden");
-    });
+document.getElementById("productsToggleBtn").onclick = () => {
+    document.getElementById("productsMenu").classList.toggle("hidden");
+}
+document.getElementById("userToggleBtn").onclick = () => {
+    document.getElementById("userMenu").classList.toggle("hidden");
+}
+document.getElementById("settingsToggleBtn")?.addEventListener("click", () => {
+    document.getElementById("settingsMenu").classList.toggle("hidden");
+});
 </script>
 
 <!-- MAIN CONTENT -->
@@ -164,11 +168,10 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 
         <div class="flex items-center gap-4">
             <div class="relative">
-    <input type="text" placeholder="Search here"
-           class="border rounded-lg px-4 py-2 pl-10 w-48 md:w-64 bg-transparent shadow-sm focus:outline-none focus:border-indigo-500">
-            <span class="material-icons absolute left-3 top-2 text-gray-400 text-base">search</span>
-        </div>
-
+                <input type="text" placeholder="Search here"
+                    class="border rounded-lg px-4 py-2 pl-10 w-48 md:w-64 bg-transparent shadow-sm focus:outline-none focus:border-indigo-500">
+                <span class="material-icons absolute left-3 top-2 text-gray-400 text-base">search</span>
+            </div>
 
             <span class="material-icons text-gray-600 hover:text-gray-900 cursor-pointer">account_circle</span>
             <span class="material-icons text-gray-600 hover:text-gray-900 cursor-pointer">settings</span>
@@ -195,12 +198,12 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 </div>
 
 <script>
-    document.getElementById("openTaxModal").addEventListener("click", () => {
-        document.getElementById("taxModal").classList.remove("hidden");
-    });
-    document.getElementById("closeTaxModal").addEventListener("click", () => {
-        document.getElementById("taxModal").classList.add("hidden");
-    });
+document.getElementById("openTaxModal")?.addEventListener("click", () => {
+    document.getElementById("taxModal").classList.remove("hidden");
+});
+document.getElementById("closeTaxModal")?.addEventListener("click", () => {
+    document.getElementById("taxModal").classList.add("hidden");
+});
 </script>
 
 </body>

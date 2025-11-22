@@ -3,6 +3,10 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/layout.php';
 require "auth.php";
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Get order_id from URL
 $order_id = intval($_GET['order_id'] ?? 0);
 if (!$order_id) {
@@ -49,7 +53,8 @@ ob_start();
 <div class="bg-white p-6 rounded-xl shadow">
   <h2 class="text-2xl font-semibold mb-4">Order Details</h2>
   <p><strong>Order No:</strong> <?= htmlspecialchars($order['order_number']) ?></p>
-  <p><strong>Customer:</strong> <?= htmlspecialchars($order['customer_name']) ?> (<?= htmlspecialchars($order['customer_email']) ?>)</p>
+  <p><strong>Customer:</strong> <?= htmlspecialchars($order['customer_name']) ?> 
+     (<?= htmlspecialchars($order['customer_email']) ?>)</p>
   <p><strong>Total:</strong> $<?= number_format($order['total_amount'], 2) ?></p>
 
   <h3 class="mt-6 text-lg font-semibold mb-2">Items</h3>
@@ -64,13 +69,17 @@ ob_start();
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($items as $it): ?>
+      <?php foreach ($items as $it): 
+          $qty = intval($it['qty']);
+          $price = floatval($it['price']);
+          $subtotal = round($qty * $price, 2); // Calculate subtotal dynamically
+      ?>
         <tr>
           <td class="border p-2"><?= ucfirst($it['item_type']) ?></td>
           <td class="border p-2"><?= htmlspecialchars(getItemName($pdo, $it['item_type'], $it['item_id'])) ?></td>
-          <td class="border p-2"><?= htmlspecialchars($it['qty']) ?></td>
-          <td class="border p-2">$<?= number_format($it['price'], 2) ?></td>
-          <td class="border p-2">$<?= number_format($it['line_total'], 2) ?></td>
+          <td class="border p-2"><?= $qty ?></td>
+          <td class="border p-2">$<?= number_format($price, 2) ?></td>
+          <td class="border p-2">$<?= number_format($subtotal, 2) ?></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
@@ -83,5 +92,7 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-renderLayout('Order Details', $content);
+
+// Pass 'orders' as $activePage to highlight sidebar
+renderLayout('Order Details', $content, 'orders');
 ?>
