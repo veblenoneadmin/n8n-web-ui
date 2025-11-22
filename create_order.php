@@ -148,9 +148,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
 
-            // ✅ Safe redirect to order details page
-            header("Location: orders.php?order_id=" . urlencode($order_id));
-            exit;
+           // Redirect to order details
+$order_id = $pdo->lastInsertId(); // make sure $order_id is set
+if (!headers_sent()) {
+    header("Location: orders.php?order_id=" . urlencode($order_id));
+    exit;
+} else {
+    echo "<script>window.location.href='orders.php?order_id=" . urlencode($order_id) . "';</script>";
+    exit;
+}
 
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
