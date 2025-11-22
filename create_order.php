@@ -619,154 +619,119 @@ ob_start();
 
 <!-- JS -->
 <script>
+<script>
 (function () {
 
-  // =====================================================
-  // MAIN TOTAL CALCULATOR
-  // =====================================================
+  // -------------------------
+  // UPDATE TOTALS FUNCTION
+  // -------------------------
   function updateTotal() {
     let subtotal = 0;
     let summaryHTML = "";
 
-    // ===================== PRODUCTS =====================
-    document.querySelectorAll('.qty-input').forEach(function (input) {
-      let qty = parseInt(input.value) || 0;
-      let price = parseFloat(input.dataset.price) || 0;
-      let row = input.closest('tr');
-      let sub = price * qty;
+    // ----- PRODUCTS -----
+    document.querySelectorAll('.qty-input').forEach(input => {
+      const qty = parseInt(input.value) || 0;
+      const price = parseFloat(input.dataset.price) || 0;
+      const row = input.closest('tr');
+      const sub = price * qty;
 
-      if (row.querySelector('.subtotal')) {
-        row.querySelector('.subtotal').textContent = sub.toFixed(2);
-      }
+      if (row.querySelector('.subtotal')) row.querySelector('.subtotal').textContent = sub.toFixed(2);
 
       if (qty > 0) {
-        let name = row.querySelector('.product-name')?.textContent || 'Item';
-        summaryHTML += `
-          <div class="flex justify-between mb-1">
-            <span>${name} x ${qty}</span>
-            <span>$${sub.toFixed(2)}</span>
-          </div>`;
+        const name = row.querySelector('.product-name')?.textContent || 'Item';
+        summaryHTML += `<div class="flex justify-between mb-1"><span>${name} x ${qty}</span><span>$${sub.toFixed(2)}</span></div>`;
       }
 
       subtotal += sub;
     });
 
-    // ===================== SPLIT ITEMS =====================
-    document.querySelectorAll('.split-qty').forEach(function (input) {
-      let qty = parseInt(input.value) || 0;
-      let price = parseFloat(input.dataset.price) || 0;
-      let row = input.closest('tr');
-      let sub = price * qty;
+    // ----- SPLIT ITEMS -----
+    document.querySelectorAll('.split-qty').forEach(input => {
+      const qty = parseInt(input.value) || 0;
+      const price = parseFloat(input.dataset.price) || 0;
+      const row = input.closest('tr');
+      const sub = price * qty;
 
-      if (row.querySelector('.subtotal')) {
-        row.querySelector('.subtotal').textContent = sub.toFixed(2);
-      }
+      if (row.querySelector('.subtotal')) row.querySelector('.subtotal').textContent = sub.toFixed(2);
 
       if (qty > 0) {
-        let name = row.querySelector('.item-name')?.textContent || 'Split Item';
-        summaryHTML += `
-          <div class="flex justify-between mb-1">
-            <span>${name} x ${qty}</span>
-            <span>$${sub.toFixed(2)}</span>
-          </div>`;
+        const name = row.querySelector('.item-name')?.textContent || 'Split Item';
+        summaryHTML += `<div class="flex justify-between mb-1"><span>${name} x ${qty}</span><span>$${sub.toFixed(2)}</span></div>`;
       }
 
       subtotal += sub;
     });
 
-    // ===================== PERSONNEL HOURS =====================
-    document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
-      const rate = parseFloat(row.dataset.rate);
-      const input = row.querySelector(".hour-input");
-      const subtotalCell = row.querySelector(".pers-subtotal");
+    // ----- PERSONNEL -----
+    document.querySelectorAll('#personnelTable tbody tr').forEach(row => {
+      const input = row.querySelector('.hour-input');
       if (!input) return;
 
-      let hours = parseFloat(input.value) || 0;
-      let persSubtotal = rate * hours;
+      const rate = parseFloat(row.dataset.rate) || 0;
+      const hours = parseFloat(input.value) || 0;
+      const persSubtotal = rate * hours;
 
-      subtotalCell.textContent = persSubtotal.toFixed(2);
+      const subtotalCell = row.querySelector('.pers-subtotal');
+      if (subtotalCell) subtotalCell.textContent = persSubtotal.toFixed(2);
 
       if (hours > 0) {
-        let name = row.querySelector(".pers-name").textContent;
-        summaryHTML += `
-          <div class="flex justify-between mb-1">
-              <span>${name} (${hours} hr)</span>
-              <span>$${persSubtotal.toFixed(2)}</span>
-          </div>`;
+        const name = row.querySelector('.pers-name')?.textContent || 'Personnel';
+        summaryHTML += `<div class="flex justify-between mb-1"><span>${name} (${hours} hr)</span><span>$${persSubtotal.toFixed(2)}</span></div>`;
       }
 
       subtotal += persSubtotal;
     });
 
-    // ===================== DUCTED INSTALLATION =====================
-    document.querySelectorAll('.installation-qty').forEach(function (input) {
-      let qty = parseInt(input.value) || 0;
-      let row = input.closest('tr');
-      let price = parseFloat(row.dataset.price) || 0;
-      let sub = price * qty;
+    // ----- DUCTED INSTALLATIONS -----
+    document.querySelectorAll('.installation-qty').forEach(input => {
+      const qty = parseInt(input.value) || 0;
+      const row = input.closest('tr');
+      const price = parseFloat(row.dataset.price) || 0;
+      const sub = price * qty;
 
-      if (row.querySelector('.installation-subtotal')) {
-        row.querySelector('.installation-subtotal').textContent = sub.toFixed(2);
-      }
+      if (row.querySelector('.installation-subtotal')) row.querySelector('.installation-subtotal').textContent = sub.toFixed(2);
 
       if (qty > 0) {
-        let type = row.querySelector('.install-type')?.value || '';
-        let model = type === 'indoor'
-          ? row.dataset.modelIndoor
-          : row.dataset.modelOutdoor;
-
-        summaryHTML += `
-          <div class="flex justify-between mb-1">
-            <span>${model} (${type}) x ${qty}</span>
-            <span>$${sub.toFixed(2)}</span>
-          </div>`;
+        const type = row.querySelector('.install-type')?.value || '';
+        const model = type === 'indoor' ? row.dataset.modelIndoor : row.dataset.modelOutdoor;
+        summaryHTML += `<div class="flex justify-between mb-1"><span>${model} (${type}) x ${qty}</span><span>$${sub.toFixed(2)}</span></div>`;
       }
 
       subtotal += sub;
     });
 
-    // ===================== EQUIPMENT =====================
-    document.querySelectorAll("#equipmentTable tbody tr").forEach(row => {
-      let qty = parseInt(row.querySelector(".equip-input")?.value) || 0;
-      let rate = parseFloat(row.dataset.rate) || 0;
-      let sub = qty * rate;
+    // ----- EQUIPMENT -----
+    document.querySelectorAll('#equipmentTable tbody tr').forEach(row => {
+      const input = row.querySelector('.equip-input');
+      const qty = parseInt(input.value) || 0;
+      const rate = parseFloat(row.dataset.rate) || 0;
+      const sub = qty * rate;
 
-      let cell = row.querySelector(".equip-subtotal");
-      if (cell) cell.textContent = sub.toFixed(2);
+      if (row.querySelector('.equip-subtotal')) row.querySelector('.equip-subtotal').textContent = sub.toFixed(2);
 
       if (qty > 0) {
-        let name = row.querySelector(".equip-name")?.textContent.trim() || "Equipment";
-        summaryHTML += `
-          <div class="flex justify-between mb-1">
-            <span>${name} (x${qty})</span>
-            <span>$${sub.toFixed(2)}</span>
-          </div>`;
+        const name = row.querySelector('.equip-name')?.textContent || 'Equipment';
+        summaryHTML += `<div class="flex justify-between mb-1"><span>${name} x ${qty}</span><span>$${sub.toFixed(2)}</span></div>`;
       }
 
       subtotal += sub;
     });
 
-    // ===================== OTHER EXPENSES =====================
-    document.querySelectorAll(".other-expense-row").forEach(row => {
-      let name = row.querySelector(".expense-name").value.trim();
-      let amt = parseFloat(row.querySelector(".expense-amount").value) || 0;
-
-      if (amt > 0 && name !== "") {
-        summaryHTML += `
-          <div class="flex justify-between mb-1">
-            <span>${name}</span>
-            <span>$${amt.toFixed(2)}</span>
-          </div>`;
+    // ----- OTHER EXPENSES -----
+    document.querySelectorAll('.other-expense-row').forEach(row => {
+      const name = row.querySelector('.expense-name')?.value.trim() || '';
+      const amt = parseFloat(row.querySelector('.expense-amount')?.value) || 0;
+      if (name && amt > 0) {
+        summaryHTML += `<div class="flex justify-between mb-1"><span>${name}</span><span>$${amt.toFixed(2)}</span></div>`;
       }
-
       subtotal += amt;
     });
 
-    // ===================== SHOW SUMMARY =====================
-    document.getElementById('order-summary').innerHTML =
-      summaryHTML || '<span style="color:#777;">No items selected.</span>';
+    // ----- SHOW SUMMARY -----
+    document.getElementById('order-summary').innerHTML = summaryHTML || '<span style="color:#777;">No items selected.</span>';
 
-    // ===================== GST + TOTAL =====================
+    // ----- GST + TOTAL -----
     const gstRate = 0.10;
     const gstAmount = subtotal * gstRate;
     const grandTotal = subtotal + gstAmount;
@@ -775,153 +740,105 @@ ob_start();
     document.getElementById('taxAmount').textContent = gstAmount.toFixed(2);
     document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
 
-    // ===================== PROFIT SUMMARY (unchanged) =====================
-    let profit = subtotal * 0.30;
-    let netProfitPercent = subtotal > 0 ? ((profit - gstAmount) / subtotal) * 100 : 0;
-    let profitMargin = (profit / subtotal) * 100;
-    let totalProfit = profit;
+    // ----- PROFIT SUMMARY -----
+    const profit = subtotal * 0.30;
+    const netProfitPercent = subtotal > 0 ? ((profit - gstAmount) / subtotal) * 100 : 0;
+    const profitMargin = subtotal > 0 ? (profit / subtotal) * 100 : 0;
+    const totalProfit = profit;
 
     document.getElementById('profitDisplay').textContent = profit.toFixed(2);
     document.getElementById('netProfitDisplay').textContent = netProfitPercent.toFixed(2);
-    document.getElementById('profitMarginDisplay').textContent = isFinite(profitMargin) ? profitMargin.toFixed(2) : "0.00";
+    document.getElementById('profitMarginDisplay').textContent = profitMargin.toFixed(2);
     document.getElementById('totalProfitDisplay').textContent = totalProfit.toFixed(2);
   }
 
-  // =====================================================
-  // PERSONNEL PLUS / MINUS
-  // =====================================================
-  document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
-      const rate = parseFloat(row.dataset.rate);
-      const input = row.querySelector(".hour-input");
-      const plus = row.querySelector(".hour-plus");
-      const minus = row.querySelector(".hour-minus");
-      const subtotalCell = row.querySelector(".pers-subtotal");
+  // -------------------------
+  // EVENT DELEGATION FOR ALL BUTTONS
+  // -------------------------
+  document.addEventListener('click', function(e) {
+    const target = e.target;
+
+    // Products plus/minus
+    if (target.matches('.plus-btn') || target.matches('.minus-btn')) {
+      const row = target.closest('tr');
+      const input = row.querySelector('.qty-input');
       if (!input) return;
-
-      function updatePers() {
-        let hours = parseFloat(input.value) || 0;
-        subtotalCell.textContent = (rate * hours).toFixed(2);
-        updateTotal();
-      }
-
-      plus.addEventListener("click", () => {
-        input.value = parseInt(input.value || 0) + 1;
-        updatePers();
-      });
-
-      minus.addEventListener("click", () => {
-        input.value = Math.max(0, parseInt(input.value || 0) - 1);
-        updatePers();
-      });
-
-      input.addEventListener("input", updatePers);
-    });
-  });
-
-  // =====================================================
-  // EQUIPMENT PLUS / MINUS
-  // =====================================================
-  document.querySelectorAll(".equip-plus").forEach(btn => {
-    btn.addEventListener("click", () => {
-      let row = btn.closest("tr");
-      let input = row.querySelector(".equip-input");
-      input.value = (parseInt(input.value) || 0) + 1;
-
-      let rate = parseFloat(row.dataset.rate) || 0;
-      row.querySelector(".equip-subtotal").textContent = (rate * input.value).toFixed(2);
-
+      input.value = parseInt(input.value || 0) + (target.matches('.plus-btn') ? 1 : -1);
+      input.value = Math.max(0, input.value);
       updateTotal();
-    });
-  });
+    }
 
-  document.querySelectorAll(".equip-minus").forEach(btn => {
-    btn.addEventListener("click", () => {
-      let row = btn.closest("tr");
-      let input = row.querySelector(".equip-input");
-      let current = parseInt(input.value) || 0;
-
-      if (current > 0) input.value = current - 1;
-
-      let rate = parseFloat(row.dataset.rate) || 0;
-      row.querySelector(".equip-subtotal").textContent = (rate * input.value).toFixed(2);
-
+    // Personnel plus/minus
+    if (target.matches('.hour-plus') || target.matches('.hour-minus')) {
+      const row = target.closest('tr');
+      const input = row.querySelector('.hour-input');
+      if (!input) return;
+      input.value = parseInt(input.value || 0) + (target.matches('.hour-plus') ? 1 : -1);
+      input.value = Math.max(0, input.value);
       updateTotal();
-    });
-  });
+    }
 
-  document.querySelectorAll(".equip-input").forEach(input => {
-    input.addEventListener("input", () => {
-      let row = input.closest("tr");
-      let rate = parseFloat(row.dataset.rate) || 0;
-      let qty = parseInt(input.value) || 0;
-      row.querySelector(".equip-subtotal").textContent = (rate * qty).toFixed(2);
+    // Equipment plus/minus
+    if (target.matches('.equip-plus') || target.matches('.equip-minus')) {
+      const row = target.closest('tr');
+      const input = row.querySelector('.equip-input');
+      if (!input) return;
+      input.value = parseInt(input.value || 0) + (target.matches('.equip-plus') ? 1 : -1);
+      input.value = Math.max(0, input.value);
       updateTotal();
-    });
+    }
+
+    // Remove Other Expense row
+    if (target.closest('.remove-expense-btn')) {
+      const row = target.closest('.other-expense-row');
+      if (row) row.remove();
+      updateTotal();
+    }
   });
 
-  // =====================================================
-  // OTHER EXPENSES — FIXED VERSION
-  // =====================================================
-  document.addEventListener("DOMContentLoaded", function () {
-    const container = document.getElementById("otherExpensesContainer");
-    const addBtn = document.getElementById("addOtherExpenseBtn");
+  // -------------------------
+  // INPUT CHANGE HANDLERS
+  // -------------------------
+  document.addEventListener('input', function(e) {
+    if (e.target.matches('.qty-input, .split-qty, .installation-qty, .hour-input, .equip-input, .expense-name, .expense-amount, .install-type')) {
+      updateTotal();
+    }
+  });
 
-    if (!container || !addBtn) return;
-
+  // -------------------------
+  // ADD OTHER EXPENSE ROW
+  // -------------------------
+  const otherContainer = document.getElementById('otherExpensesContainer');
+  const addOtherBtn = document.getElementById('addOtherExpenseBtn');
+  if (otherContainer && addOtherBtn) {
     function addExpenseRow() {
-      const row = document.createElement("div");
-      row.classList.add("other-expense-row", "flex", "gap-2", "items-center", "mb-2");
-
+      const row = document.createElement('div');
+      row.classList.add('other-expense-row', 'flex', 'gap-2', 'items-center', 'mb-2');
       row.innerHTML = `
         <input type="text" class="expense-name border p-2 rounded flex-1" placeholder="Expense Name">
         <input type="number" min="0" step="0.01" class="expense-amount border p-2 rounded w-24" placeholder="Amount">
-        <button type="button" class="remove-expense-btn text-red-500">
-          <span class="material-icons">close</span>
-        </button>
+        <button type="button" class="remove-expense-btn text-red-500"><span class="material-icons">close</span></button>
       `;
-
-      container.appendChild(row);
-
-      row.querySelector(".remove-expense-btn").addEventListener("click", () => {
-        row.remove();
-        updateTotal();
-      });
-
-      row.querySelector(".expense-name").addEventListener("input", updateTotal);
-      row.querySelector(".expense-amount").addEventListener("input", updateTotal);
+      otherContainer.appendChild(row);
     }
 
-    addBtn.addEventListener("click", (e) => {
+    addOtherBtn.addEventListener('click', function(e) {
       e.preventDefault();
       addExpenseRow();
     });
 
     // Start with one row
     addExpenseRow();
-  });
+  }
 
-  // =====================================================
-  // GENERIC CHANGES
-  // =====================================================
-  document.addEventListener('change', function (e) {
-    if (
-      e.target.classList.contains('install-type') ||
-      e.target.classList.contains('split-qty') ||
-      e.target.classList.contains('installation-qty') ||
-      e.target.classList.contains('qty-input')
-    ) updateTotal();
-  });
-
-  document.querySelectorAll('input[type=number]').forEach(inp =>
-    inp.addEventListener('input', updateTotal)
-  );
-
+  // -------------------------
   // INITIAL LOAD
+  // -------------------------
   updateTotal();
 
 })();
 </script>
+
 
 
 <?php
