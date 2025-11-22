@@ -1,139 +1,17 @@
 <?php
-ob_start();
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
+ob_start(); // Start output buffering to allow header() redirect
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/layout.php';
 require "auth.php";
 
-if (!isset($pdo) || !$pdo instanceof PDO) {
-    die('<h2>Database connection error</h2><p>config.php must create a PDO instance named $pdo.</p>');
-}
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// ---------------------------
-// AJAX: return booked personnel IDs for a date
-// URL: create_order.php?check_booked=1&date=YYYY-MM-DD
-// ---------------------------
-if (isset($_GET['check_booked']) && $_GET['check_booked']) {
-    $date = $_GET['date'] ?? null;
-    header('Content-Type: application/json; charset=utf-8');
-    if (!$date) {
-        echo json_encode([]);
-        exit;
-    }
-    try {
-        $stmt = $pdo->prepare("SELECT personnel_id FROM personnel_bookings WHERE booked_date = ?");
-        $stmt->execute([$date]);
-        $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        echo json_encode(array_map('strval', $ids));
-    } catch (Exception $e) {
-        echo json_encode([]);
-    }
-    exit;
-}
-
-// ---------------------------
-// Helper: detect whether a column exists in a table
-// ---------------------------
-function column_exists(PDO $pdo, string $table, string $column): bool {
-    try {
-        $q = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
-        $q->execute([$column]);
-        return (bool)$q->fetch();
-    } catch (Exception $e) {
-        return false;
-    }
-}
-
-// Helper: find an existing split table name from a list of candidates
-function find_split_table(PDO $pdo, array $candidates) {
-    foreach ($candidates as $t) {
-        $r = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($t))->fetchColumn();
-        if ($r) return $t;
-    }
-    return null;
-}
-
-// ---------------------------
-// Load lists
-// ---------------------------
 $message = '';
-$products = [];
-$personnel = [];
-$ducted_installations = [];
-$split_installations = [];
 
-try {
-    $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $message = "❌ Failed to load products: " . $e->getMessage();
-}
-
-try {
-    $personnel = $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $message = "❌ Failed to load personnel: " . $e->getMessage();
-}
-
-try {
-    $ducted_installations = $pdo->query("SELECT id, equipment_name, model_name_indoor, model_name_outdoor, total_cost FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $ducted_installations = [];
-    $message = "❌ Failed to load ducted installations: " . $e->getMessage();
-}
-
-// Load equipment list (add this near the other "Load lists" queries)
-$equipment = [];
-try {
-    // Table: equipment (id, item, rate)
-    $equipment = $pdo->query("SELECT id, item, rate FROM equipment ORDER BY item ASC")
-                      ->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // if table missing or query fails, $equipment stays an empty array
-    $equipment = [];
-    // optionally set $message so you see the error on the page (comment out in production)
-    // $message = "❌ Failed to load equipment: " . $e->getMessage();
-}
-
-
-// Try to find a split installation table under several possible names
-$split_table_candidates = ['split_system_installation', 'split_installations', 'split_systems', 'split_installation'];
-$found = find_split_table($pdo, $split_table_candidates);
-if ($found) {
-    try {
-        $split_installations = $pdo->query("
-    SELECT id, item_name, unit_price 
-    FROM `$found` 
-    ORDER BY item_name ASC
-")->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (Exception $e) {
-        $split_installations = [];
-        $message = "❌ Failed to load split installations: " . $e->getMessage();
-    }
-} else {
-    // no split table found — leave empty
-    $split_installations = [];
-}
-
-// Determine selected appointment date for initial render (prefill from POST if available)
-$selected_date = $_POST['appointment_date'] ?? $_GET['date'] ?? null;
-$booked_personnel_ids = [];
-if ($selected_date) {
-    try {
-        $q = $pdo->prepare("SELECT personnel_id FROM personnel_bookings WHERE booked_date = ?");
-        $q->execute([$selected_date]);
-        $booked_personnel_ids = $q->fetchAll(PDO::FETCH_COLUMN);
-    } catch (Exception $e) {
-        $booked_personnel_ids = [];
-    }
-}
-
-// ---------------------------
-// Handle POST - create order
-// ---------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $generateOrderNumber = function() {
         return 'ORD-' . date('YmdHis') . '-' . rand(100, 999);
     };
@@ -142,8 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_email    = trim($_POST['customer_email'] ?? '');
     $contact_number    = trim($_POST['contact_number'] ?? '');
     $appointment_date  = trim($_POST['appointment_date'] ?? '');
-    $quantities        = $_POST['quantity'] ?? [];            // products
-    $split_quantities  = $_POST['split'] ?? [];               // split (if any) -> expected format split[id][qty]
+    $quantities        = $_POST['quantity'] ?? [];
+    $split_quantities  = $_POST['split'] ?? [];
     $ducted_inputs     = $_POST['ducted'] ?? [];
     $personnel_inputs  = $_POST['personnel_selected'] ?? [];
 
@@ -153,35 +31,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            // Build INSERT INTO orders adaptively depending on which columns exist
-            $hasCustomerEmail   = column_exists($pdo, 'orders', 'customer_email');
-            $hasContactNumber   = column_exists($pdo, 'orders', 'contact_number');
-            $hasAppointmentDate = column_exists($pdo, 'orders', 'appointment_date');
-
+            // --- Build orders INSERT ---
             $cols = ['order_number', 'customer_name'];
             $placeholders = ['?', '?'];
-            $values = [];
+            $values = [$generateOrderNumber(), $customer_name];
 
-            $order_number = $generateOrderNumber();
-            $values[] = $order_number;
-            $values[] = $customer_name;
-
-            if ($hasCustomerEmail) {
+            if (column_exists($pdo, 'orders', 'customer_email')) {
                 $cols[] = 'customer_email';
                 $placeholders[] = '?';
-                $values[] = $customer_email !== '' ? $customer_email : null;
+                $values[] = $customer_email ?: null;
             }
 
-            if ($hasContactNumber) {
+            if (column_exists($pdo, 'orders', 'contact_number')) {
                 $cols[] = 'contact_number';
                 $placeholders[] = '?';
-                $values[] = $contact_number !== '' ? $contact_number : null;
+                $values[] = $contact_number ?: null;
             }
 
-            if ($hasAppointmentDate) {
+            if (column_exists($pdo, 'orders', 'appointment_date')) {
                 $cols[] = 'appointment_date';
                 $placeholders[] = '?';
-                $values[] = $appointment_date !== '' ? $appointment_date : null;
+                $values[] = $appointment_date ?: null;
             }
 
             // total_amount always present
@@ -192,43 +62,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sql = "INSERT INTO orders (" . implode(',', $cols) . ") VALUES (" . implode(',', $placeholders) . ")";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($values);
+
             $order_id = $pdo->lastInsertId();
 
-            // IMPORTANT: your order_items table has column installation_type before qty
+            // --- Prepare order_items INSERT ---
             $insertStmt = $pdo->prepare("
-                INSERT INTO order_items (order_id, item_type, item_id, installation_type, qty, price, line_total)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO order_items (order_id, item_type, item_id, installation_type, qty, price)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
 
             $total = 0.0;
 
             // Products
             foreach ($quantities as $pid => $qtyRaw) {
-                $pidInt = intval($pid);
                 $qty = max(0, intval($qtyRaw));
                 if ($qty > 0) {
                     $prod = null;
-                    foreach ($products as $p) if ($p['id'] == $pidInt) { $prod = $p; break; }
+                    foreach ($products as $p) if ($p['id'] == intval($pid)) { $prod = $p; break; }
                     if ($prod) {
                         $price = floatval($prod['price']);
                         $subtotal = round($price * $qty, 2);
-                        $insertStmt->execute([$order_id, 'product', $pidInt, null, $qty, $price, $subtotal]);
+                        $insertStmt->execute([$order_id, 'product', intval($pid), null, $qty, $price]);
                         $total += $subtotal;
                     }
                 }
             }
 
-            // Split installations (if any) - expects $_POST['split'][id]['qty']
+            // Split installations
             foreach ($split_quantities as $sid => $sdata) {
-                $sidInt = intval($sid);
-                $qty = max(0, intval(($sdata['qty'] ?? 0)));
+                $qty = max(0, intval($sdata['qty'] ?? 0));
                 if ($qty > 0) {
                     $row = null;
-                    foreach ($split_installations as $s) if ($s['id'] == $sidInt) { $row = $s; break; }
+                    foreach ($split_installations as $s) if ($s['id'] == intval($sid)) { $row = $s; break; }
                     if ($row) {
-                        $price = floatval($row['price']);
+                        $price = floatval($row['unit_price']);
                         $subtotal = round($price * $qty, 2);
-                        $insertStmt->execute([$order_id, 'installation', $sidInt, null, $qty, $price, $subtotal]);
+                        $insertStmt->execute([$order_id, 'installation', intval($sid), null, $qty, $price]);
                         $total += $subtotal;
                     }
                 }
@@ -242,65 +111,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($pers) {
                     $price = floatval($pers['rate']);
                     $subtotal = round($price, 2);
-                    $insertStmt->execute([$order_id, 'personnel', $pidInt, null, 1, $price, $subtotal]);
+                    $insertStmt->execute([$order_id, 'personnel', $pidInt, null, 1, $price]);
                     $total += $subtotal;
 
-                    // Book personnel for appointment_date (if provided and table exists)
-                    if ($appointment_date) {
-                        try {
-                            $tbl = $pdo->query("SHOW TABLES LIKE 'personnel_bookings'")->fetchColumn();
-                            if ($tbl) {
-                                $chk = $pdo->prepare("SELECT COUNT(*) FROM personnel_bookings WHERE personnel_id = ? AND booked_date = ?");
-                                $chk->execute([$pidInt, $appointment_date]);
-                                $count = (int)$chk->fetchColumn();
-                                if ($count === 0) {
-                                    $tryInsert = $pdo->prepare("INSERT INTO personnel_bookings (personnel_id, booked_date) VALUES (?, ?)");
-                                    $tryInsert->execute([$pidInt, $appointment_date]);
-                                }
-                            }
-                        } catch (Exception $ex) {
-                            // ignore
+                    // Book personnel
+                    if ($appointment_date && table_exists($pdo, 'personnel_bookings')) {
+                        $chk = $pdo->prepare("SELECT COUNT(*) FROM personnel_bookings WHERE personnel_id=? AND booked_date=?");
+                        $chk->execute([$pidInt, $appointment_date]);
+                        if ((int)$chk->fetchColumn() === 0) {
+                            $ins = $pdo->prepare("INSERT INTO personnel_bookings (personnel_id, booked_date) VALUES (?, ?)");
+                            $ins->execute([$pidInt, $appointment_date]);
                         }
                     }
                 }
             }
 
-            // Ducted Installations (with installation_type)
+            // Ducted Installations
             foreach ($ducted_inputs as $did => $d) {
-                $didInt = intval($did);
                 $qty = max(0, intval($d['qty'] ?? 0));
                 $type = $d['installation_type'] ?? '';
                 if ($qty > 0 && $type !== '') {
                     $row = null;
-                    foreach ($ducted_installations as $r) if ($r['id'] == $didInt) { $row = $r; break; }
+                    foreach ($ducted_installations as $r) if ($r['id'] == intval($did)) { $row = $r; break; }
                     if ($row) {
                         $price = floatval($row['total_cost']);
                         $subtotal = round($price * $qty, 2);
-                        $insertStmt->execute([$order_id, 'installation', $didInt, $type, $qty, $price, $subtotal]);
+                        $insertStmt->execute([$order_id, 'installation', intval($did), $type, $qty, $price]);
                         $total += $subtotal;
                     }
                 }
             }
 
             // Update orders total_amount
-            $upd = $pdo->prepare("UPDATE orders SET total_amount = ? WHERE id = ?");
-            $upd->execute([round($total, 2), $order_id]);
+            $upd = $pdo->prepare("UPDATE orders SET total_amount=? WHERE id=?");
+            $upd->execute([round($total,2), $order_id]);
 
             $pdo->commit();
 
-            // Redirect to orders.php to view newly created order
-            header("Location: orders?order_id=" . urlencode($order_id));
+            // ✅ Safe redirect to order details page
+            header("Location: orders.php?order_id=" . urlencode($order_id));
             exit;
+
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             $message = "❌ Failed to create order: " . $e->getMessage();
         }
     }
 }
-
-// Render page
-ob_start();
 ?>
+
 
 <?php if ($message): ?>
   <div class="mb-4 text-red-600"><?= htmlspecialchars($message) ?></div>
