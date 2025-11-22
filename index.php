@@ -823,6 +823,7 @@ ob_start();
 
 
 <?php
+// Only render layout if we didn't redirect
 $content = ob_get_clean();
 renderLayout('Create Order', $content);
 ?>
