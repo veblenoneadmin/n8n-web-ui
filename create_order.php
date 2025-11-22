@@ -486,7 +486,6 @@ if (!headers_sent()) {
 
 <!-- JS -->
 <script>
-<script>
 (function () {
 
   // -------------------------
