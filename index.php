@@ -192,97 +192,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute($values);
             $order_id = $pdo->lastInsertId();
 
-            // IMPORTANT: your order_items table has column installation_type before qty
-            $insertStmt = $pdo->prepare("
-                INSERT INTO order_items (order_id, item_type, item_id, installation_type, qty, price, line_total)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ");
+           // IMPORTANT: your order_items table has column installation_type before qty
+$insertStmt = $pdo->prepare("
+    INSERT INTO order_items (order_id, item_type, item_id, installation_type, qty, price)
+    VALUES (?, ?, ?, ?, ?, ?)
+");
 
-            $total = 0.0;
+$total = 0.0;
 
-            // Products
-            foreach ($quantities as $pid => $qtyRaw) {
-                $pidInt = intval($pid);
-                $qty = max(0, intval($qtyRaw));
-                if ($qty > 0) {
-                    $prod = null;
-                    foreach ($products as $p) if ($p['id'] == $pidInt) { $prod = $p; break; }
-                    if ($prod) {
-                        $price = floatval($prod['price']);
-                        $subtotal = round($price * $qty, 2);
-                        $insertStmt->execute([$order_id, 'product', $pidInt, null, $qty, $price, $subtotal]);
-                        $total += $subtotal;
+// Products
+foreach ($quantities as $pid => $qtyRaw) {
+    $pidInt = intval($pid);
+    $qty = max(0, intval($qtyRaw));
+    if ($qty > 0) {
+        $prod = null;
+        foreach ($products as $p) if ($p['id'] == $pidInt) { $prod = $p; break; }
+        if ($prod) {
+            $price = floatval($prod['price']);
+            $subtotal = round($price * $qty, 2);
+            $insertStmt->execute([$order_id, 'product', $pidInt, null, $qty, $price]);
+            $total += $subtotal;
+        }
+    }
+}
+
+// Split installations
+foreach ($split_quantities as $sid => $sdata) {
+    $sidInt = intval($sid);
+    $qty = max(0, intval(($sdata['qty'] ?? 0)));
+    if ($qty > 0) {
+        $row = null;
+        foreach ($split_installations as $s) if ($s['id'] == $sidInt) { $row = $s; break; }
+        if ($row) {
+            $price = floatval($row['unit_price']);
+            $subtotal = round($price * $qty, 2);
+            $insertStmt->execute([$order_id, 'installation', $sidInt, null, $qty, $price]);
+            $total += $subtotal;
+        }
+    }
+}
+
+// Personnel
+foreach ($personnel_inputs as $pid) {
+    $pidInt = intval($pid);
+    $pers = null;
+    foreach ($personnel as $p) if ($p['id'] == $pidInt) { $pers = $p; break; }
+    if ($pers) {
+        $price = floatval($pers['rate']);
+        $subtotal = round($price, 2);
+        $insertStmt->execute([$order_id, 'personnel', $pidInt, null, 1, $price]);
+        $total += $subtotal;
+
+        // Book personnel
+        if ($appointment_date) {
+            try {
+                $tbl = $pdo->query("SHOW TABLES LIKE 'personnel_bookings'")->fetchColumn();
+                if ($tbl) {
+                    $chk = $pdo->prepare("SELECT COUNT(*) FROM personnel_bookings WHERE personnel_id = ? AND booked_date = ?");
+                    $chk->execute([$pidInt, $appointment_date]);
+                    $count = (int)$chk->fetchColumn();
+                    if ($count === 0) {
+                        $tryInsert = $pdo->prepare("INSERT INTO personnel_bookings (personnel_id, booked_date) VALUES (?, ?)");
+                        $tryInsert->execute([$pidInt, $appointment_date]);
                     }
                 }
-            }
+            } catch (Exception $ex) {}
+        }
+    }
+}
 
-            // Split installations (if any) - expects $_POST['split'][id]['qty']
-            foreach ($split_quantities as $sid => $sdata) {
-                $sidInt = intval($sid);
-                $qty = max(0, intval(($sdata['qty'] ?? 0)));
-                if ($qty > 0) {
-                    $row = null;
-                    foreach ($split_installations as $s) if ($s['id'] == $sidInt) { $row = $s; break; }
-                    if ($row) {
-                        $price = floatval($row['price']);
-                        $subtotal = round($price * $qty, 2);
-                        $insertStmt->execute([$order_id, 'installation', $sidInt, null, $qty, $price, $subtotal]);
-                        $total += $subtotal;
-                    }
-                }
-            }
+// Ducted Installations
+foreach ($ducted_inputs as $did => $d) {
+    $didInt = intval($did);
+    $qty = max(0, intval($d['qty'] ?? 0));
+    $type = $d['installation_type'] ?? '';
+    if ($qty > 0 && $type !== '') {
+        $row = null;
+        foreach ($ducted_installations as $r) if ($r['id'] == $didInt) { $row = $r; break; }
+        if ($row) {
+            $price = floatval($row['total_cost']);
+            $subtotal = round($price * $qty, 2);
+            $insertStmt->execute([$order_id, 'installation', $didInt, $type, $qty, $price]);
+            $total += $subtotal;
+        }
+    }
+}
 
-            // Personnel
-            foreach ($personnel_inputs as $pid) {
-                $pidInt = intval($pid);
-                $pers = null;
-                foreach ($personnel as $p) if ($p['id'] == $pidInt) { $pers = $p; break; }
-                if ($pers) {
-                    $price = floatval($pers['rate']);
-                    $subtotal = round($price, 2);
-                    $insertStmt->execute([$order_id, 'personnel', $pidInt, null, 1, $price, $subtotal]);
-                    $total += $subtotal;
-
-                    // Book personnel for appointment_date (if provided and table exists)
-                    if ($appointment_date) {
-                        try {
-                            $tbl = $pdo->query("SHOW TABLES LIKE 'personnel_bookings'")->fetchColumn();
-                            if ($tbl) {
-                                $chk = $pdo->prepare("SELECT COUNT(*) FROM personnel_bookings WHERE personnel_id = ? AND booked_date = ?");
-                                $chk->execute([$pidInt, $appointment_date]);
-                                $count = (int)$chk->fetchColumn();
-                                if ($count === 0) {
-                                    $tryInsert = $pdo->prepare("INSERT INTO personnel_bookings (personnel_id, booked_date) VALUES (?, ?)");
-                                    $tryInsert->execute([$pidInt, $appointment_date]);
-                                }
-                            }
-                        } catch (Exception $ex) {
-                            // ignore
-                        }
-                    }
-                }
-            }
-
-            // Ducted Installations (with installation_type)
-            foreach ($ducted_inputs as $did => $d) {
-                $didInt = intval($did);
-                $qty = max(0, intval($d['qty'] ?? 0));
-                $type = $d['installation_type'] ?? '';
-                if ($qty > 0 && $type !== '') {
-                    $row = null;
-                    foreach ($ducted_installations as $r) if ($r['id'] == $didInt) { $row = $r; break; }
-                    if ($row) {
-                        $price = floatval($row['total_cost']);
-                        $subtotal = round($price * $qty, 2);
-                        $insertStmt->execute([$order_id, 'installation', $didInt, $type, $qty, $price, $subtotal]);
-                        $total += $subtotal;
-                    }
-                }
-            }
-
-            // Update orders total_amount
-            $upd = $pdo->prepare("UPDATE orders SET total_amount = ? WHERE id = ?");
-            $upd->execute([round($total, 2), $order_id]);
+// Update orders total_amount
+$upd = $pdo->prepare("UPDATE orders SET total_amount = ? WHERE id = ?");
+$upd->execute([round($total, 2), $order_id]);
 
             $pdo->commit();
 
