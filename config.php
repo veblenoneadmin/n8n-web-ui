@@ -4,12 +4,11 @@ declare(strict_types=1);
 // -----------------------------
 // Database Configuration
 // -----------------------------
-$host = 'shortline.proxy.rlwy.net';
-$port = 31315;
-$db   = 'railway';
-$user = 'root';
-$pass = 'rVkBsGReslMeafTlzATAlrIvbCPWSbaY';
-$charset = 'utf8mb4';
+$host     = "shuttle.proxy.rlwy.net";
+$port     = 25965;
+$user     = "root";
+$pass     = "THgMALdtucPApKGCBKzkeMQjyvoNwsLK";
+$dbname   = "railway";
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
 
