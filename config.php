@@ -9,8 +9,9 @@ $port     = 25965;
 $user     = "root";
 $pass     = "THgMALdtucPApKGCBKzkeMQjyvoNwsLK";
 $dbname   = "railway";
+$charset  = "utf8mb4";
 
-$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
+$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
 
 $pdo = null;
 try {
