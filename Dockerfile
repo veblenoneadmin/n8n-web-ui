@@ -7,18 +7,21 @@ WORKDIR /var/www/html
 # Copy all project files to the container
 COPY . /var/www/html/
 
-# Enable Apache mod_rewrite (needed for pretty URLs if you ever use them)
+# Enable Apache mod_rewrite (required for .htaccess)
 RUN a2enmod rewrite
 
-# Set permissions (optional, but good practice)
+# Allow .htaccess overrides in Apache config
+RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
+# Set permissions (good practice)
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Install any required PHP extensions (adjust as needed)
+# Install required PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 
-# Expose port 80
+# Expose Apache port
 EXPOSE 80
 
-# Start Apache in the foreground
+# Start Apache in foreground
 CMD ["apache2-foreground"]

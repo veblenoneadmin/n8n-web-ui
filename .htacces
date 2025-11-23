@@ -1,0 +1,14 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Serve existing files or directories normally
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Otherwise, redirect everything to index.php
+RewriteRule ^(.*)$ index.php [L,QSA]
+
+# Optional: Force trailing slash (uncomment if needed)
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_URI} !/$
+# RewriteRule ^(.*)$ /$1/ [L,R=301]
